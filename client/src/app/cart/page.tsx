@@ -184,7 +184,7 @@ const CartPage = () => {
               className={`w-full transition-all duration-300 text-white p-2 rounded-lg flex items-center justify-center gap-2 ${
                 isCartEmpty
                   ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gray-800 hover:bg-gray-900"
+                  : "bg-gray-800 hover:bg-gray-900 cursor-pointer"
               }`}
             >
               Continue

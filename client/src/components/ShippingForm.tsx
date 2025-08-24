@@ -89,12 +89,29 @@ const ShippingForm = ({
           className="border-b border-gray-200 py-2 outline-none text-sm"
           type="text"
           id="address"
-          placeholder="123 Main St, Anytown"
+          placeholder="123 Main St"
           {...register("address")}
         />
         {errors.address && (
           <p className="text-xs text-red-500">{errors.address.message}</p>
         )}
+      </div>
+
+      {/* APARTMENT / UNIT (optional) */}
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="apartment"
+          className="text-xs text-gray-500 font-medium"
+        >
+          Apartment / Unit (optional)
+        </label>
+        <input
+          className="border-b border-gray-200 py-2 outline-none text-sm"
+          type="text"
+          id="apartment"
+          placeholder="Apt 101"
+          {...register("apartment")}
+        />
       </div>
 
       {/* CITY */}
@@ -111,6 +128,57 @@ const ShippingForm = ({
         />
         {errors.city && (
           <p className="text-xs text-red-500">{errors.city.message}</p>
+        )}
+      </div>
+
+      {/* STATE */}
+      <div className="flex flex-col gap-1">
+        <label htmlFor="state" className="text-xs text-gray-500 font-medium">
+          State / Province
+        </label>
+        <input
+          className="border-b border-gray-200 py-2 outline-none text-sm"
+          type="text"
+          id="state"
+          placeholder="NY"
+          {...register("state")}
+        />
+        {errors.state && (
+          <p className="text-xs text-red-500">{errors.state.message}</p>
+        )}
+      </div>
+
+      {/* ZIP */}
+      <div className="flex flex-col gap-1">
+        <label htmlFor="zip" className="text-xs text-gray-500 font-medium">
+          ZIP / Postal Code
+        </label>
+        <input
+          className="border-b border-gray-200 py-2 outline-none text-sm"
+          type="text"
+          id="zip"
+          placeholder="10001"
+          {...register("zip")}
+        />
+        {errors.zip && (
+          <p className="text-xs text-red-500">{errors.zip.message}</p>
+        )}
+      </div>
+
+      {/* COUNTRY */}
+      <div className="flex flex-col gap-1">
+        <label htmlFor="country" className="text-xs text-gray-500 font-medium">
+          Country
+        </label>
+        <input
+          className="border-b border-gray-200 py-2 outline-none text-sm"
+          type="text"
+          id="country"
+          placeholder="USA"
+          {...register("country")}
+        />
+        {errors.country && (
+          <p className="text-xs text-red-500">{errors.country.message}</p>
         )}
       </div>
 

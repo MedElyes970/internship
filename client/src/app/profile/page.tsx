@@ -24,7 +24,7 @@ import { useRouter } from "next/navigation";
 import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 const ProfilePage = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, resetPassword } = useAuth();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState(user?.displayName || "");
@@ -70,6 +70,14 @@ const ProfilePage = () => {
   const [updatingPassword, setUpdatingPassword] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteButton, setShowDeleteButton] = useState(false);
+  const [currentUser, setCurrentUser] = useState(user);
+  const [deleteError, setDeleteError] = useState("");
+
+  const refreshUser = async () => {
+    if (!user) return;
+    await user.reload(); // fetch latest data from Firebase
+    setCurrentUser({ ...user }); // force React to re-render
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -92,6 +100,16 @@ const ProfilePage = () => {
 
     fetchShippingInfo();
   }, [user]);
+
+  // Clear verification message when user verifies email
+  useEffect(() => {
+    if (
+      currentUser?.emailVerified &&
+      verificationMessage === "Verification email sent! Check your inbox."
+    ) {
+      setVerificationMessage("");
+    }
+  }, [currentUser?.emailVerified, verificationMessage]);
 
   const hasChanges = () => {
     if (displayName !== initialData.displayName) return true;
@@ -175,16 +193,15 @@ const ProfilePage = () => {
   }, [buttonTimer]);
 
   useEffect(() => {
-    const handleFocus = async () => {
-      if (!user) return;
-      await user.reload();
-      if (user.emailVerified) setVerificationMessage("");
+    refreshUser(); // refresh user on page load
+
+    const handleFocus = () => {
+      refreshUser(); // refresh user whenever window gains focus
     };
 
     window.addEventListener("focus", handleFocus);
-
     return () => window.removeEventListener("focus", handleFocus);
-  }, [user]);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -194,14 +211,15 @@ const ProfilePage = () => {
   const handleDeleteAccount = async () => {
     if (!user) return;
     if (!password) {
-      alert("Please enter your password to confirm deletion.");
+      setDeleteError("Please enter your password to confirm deletion.");
       return;
     }
 
     try {
       setLoading(true);
+      setDeleteError("");
 
-      // Reauthenticate user with password
+      // Reauthenticate
       const credential = EmailAuthProvider.credential(user.email!, password);
       await reauthenticateWithCredential(user, credential);
 
@@ -209,15 +227,14 @@ const ProfilePage = () => {
       const userDocRef = doc(db, "users", user.uid);
       await updateDoc(userDocRef, { deletionRequestedAt: new Date() });
 
-      // Delete the user
+      // Delete user
       await deleteUser(user);
 
       router.push("/signup");
     } catch (error: any) {
-      alert("Error deleting account: " + error.message);
+      setDeleteError(error.message);
     } finally {
       setLoading(false);
-      setShowDeleteModal(false);
       setPassword("");
     }
   };
@@ -240,6 +257,8 @@ const ProfilePage = () => {
       await updatePassword(user, newPassword);
 
       setPasswordMessage("Password updated successfully!");
+      setMessage("Password updated successfully!");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       setCurrentPassword("");
       setNewPassword("");
       setShowPasswordModal(false);
@@ -283,13 +302,16 @@ const ProfilePage = () => {
                   <span>{user?.email}</span>
                 </div>
 
-                {user?.emailVerified ? (
+                {currentUser?.emailVerified ? (
                   <span className="text-green-600 text-xs font-medium mt-1 sm:mt-0">
                     Verified
                   </span>
                 ) : (
                   <button
-                    onClick={handleSendVerification}
+                    onClick={async () => {
+                      await handleSendVerification();
+                      refreshUser(); // optional: immediately refresh after sending
+                    }}
                     disabled={sendingVerification || buttonTimer > 0}
                     className="px-2 py-0.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:bg-gray-400 mt-1 sm:mt-0 cursor-pointer disabled:cursor-not-allowed"
                   >
@@ -416,6 +438,29 @@ const ProfilePage = () => {
                         Cancel
                       </button>
                     </div>
+
+                    <div className="mt-2 text-sm text-gray-600">
+                      Forgot your current password?{" "}
+                      <button
+                        type="button"
+                        className="text-blue-600 hover:underline"
+                        onClick={async () => {
+                          if (!user?.email) return;
+                          try {
+                            await resetPassword(user.email);
+                            setPasswordMessage(
+                              "Reset email sent! Check your inbox."
+                            );
+                          } catch (err: any) {
+                            setPasswordMessage(
+                              "Error sending reset email: " + err.message
+                            );
+                          }
+                        }}
+                      >
+                        Reset it
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -529,7 +574,6 @@ const ProfilePage = () => {
           </form>
         </div>
 
-        {/* Delete Modal */}
         {showDeleteModal && (
           <div className="fixed inset-0 flex items-center justify-center bg-gray-200/70 backdrop-blur-sm z-50 px-4">
             <div className="bg-white p-6 rounded-2xl w-full max-w-lg flex flex-col gap-4 shadow-xl">
@@ -553,6 +597,11 @@ const ProfilePage = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
 
+              {/* ERROR MESSAGE */}
+              {deleteError && (
+                <p className="text-xs mt-1 text-red-600">{deleteError}</p>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-2 mt-2">
                 <button
                   onClick={handleDeleteAccount}
@@ -570,10 +619,29 @@ const ProfilePage = () => {
                   onClick={() => {
                     setShowDeleteModal(false);
                     setPassword("");
+                    setDeleteError(""); // clear error when canceling
                   }}
                   className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
                 >
                   Cancel
+                </button>
+              </div>
+
+              <div className="mt-2 text-sm text-gray-600 text-center">
+                Forgot your password?{" "}
+                <button
+                  className="text-blue-600 hover:underline"
+                  onClick={async () => {
+                    if (!user?.email) return;
+                    try {
+                      await resetPassword(user.email);
+                      alert("Reset email sent! Check your inbox.");
+                    } catch (err: any) {
+                      alert("Error sending reset email: " + err.message);
+                    }
+                  }}
+                >
+                  Reset it
                 </button>
               </div>
             </div>

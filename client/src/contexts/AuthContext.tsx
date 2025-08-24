@@ -17,6 +17,7 @@ import {
   onAuthStateChanged,
   updateProfile,
   sendEmailVerification,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, googleProvider, db } from "@/lib/firebase";
@@ -32,6 +33,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>; // <-- add this
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -144,6 +146,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     loading,
@@ -151,6 +161,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signIn,
     signInWithGoogle,
     logout,
+    resetPassword,
   };
 
   return (

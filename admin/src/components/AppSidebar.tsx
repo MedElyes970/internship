@@ -10,6 +10,7 @@ import {
   Shirt,
   User,
   ShoppingBasket,
+  Hash,
 } from "lucide-react";
 import {
   Sidebar,
@@ -136,6 +137,25 @@ const AppSidebar = () => {
                   </Sheet>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Categories</SidebarGroupLabel>
+          <SidebarGroupAction>
+            <Plus /> <span className="sr-only">Add Category</span>
+          </SidebarGroupAction>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/categories">
+                    <Hash />
+                    See All Categories
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Sheet>
@@ -154,6 +174,7 @@ const AppSidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Users</SidebarGroupLabel>
           <SidebarGroupAction>
@@ -187,6 +208,7 @@ const AppSidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Orders / Payments</SidebarGroupLabel>
           <SidebarGroupAction>
@@ -196,7 +218,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link href="/users">
+                  <Link href="/payments">
                     <ShoppingBasket />
                     See All Transactions
                   </Link>

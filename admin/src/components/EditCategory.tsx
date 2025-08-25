@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   SheetContent,
   SheetDescription,
@@ -22,8 +22,8 @@ import {
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { addCategory, generateSlug, isSlugUnique } from "@/lib/categories";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { updateCategory, generateSlug, isSlugUnique, Category } from "@/lib/categories";
+import { Loader2, CheckCircle, AlertCircle, Save } from "lucide-react";
 import { toast } from "sonner";
 
 const formSchema = z.object({
@@ -33,19 +33,21 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-interface AddCategoryProps {
+interface EditCategoryProps {
+  category: Category;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-const AddCategory = ({ onSuccess }: AddCategoryProps) => {
+const EditCategory = ({ category, onSuccess, onCancel }: EditCategoryProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      description: "",
+      name: category.name,
+      description: category.description || "",
     },
   });
 
@@ -54,27 +56,28 @@ const AddCategory = ({ onSuccess }: AddCategoryProps) => {
     setSubmitStatus('idle');
 
     try {
-      // Generate slug from name
-      const slug = generateSlug(data.name);
+      // Generate new slug from name
+      const newSlug = generateSlug(data.name);
       
-      // Check if slug is unique
-      const isUnique = await isSlugUnique(slug);
-      if (!isUnique) {
-        toast.error("A category with this name already exists!");
-        setSubmitStatus('error');
-        return;
+      // Check if new slug is unique (excluding current category)
+      if (newSlug !== category.slug) {
+        const isUnique = await isSlugUnique(newSlug, category.id);
+        if (!isUnique) {
+          toast.error("A category with this name already exists!");
+          setSubmitStatus('error');
+          return;
+        }
       }
 
-      // Add category to Firebase
-      await addCategory({
+      // Update category in Firebase
+      await updateCategory(category.id!, {
         name: data.name.trim(),
-        slug,
+        slug: newSlug,
         description: data.description?.trim() || "",
       });
 
-      toast.success("Category added successfully!");
+      toast.success("Category updated successfully!");
       setSubmitStatus('success');
-      form.reset();
       
       // Call success callback if provided
       if (onSuccess) {
@@ -87,8 +90,8 @@ const AddCategory = ({ onSuccess }: AddCategoryProps) => {
       }, 2000);
 
     } catch (error) {
-      console.error('Error adding category:', error);
-      toast.error("Failed to add category. Please try again.");
+      console.error('Error updating category:', error);
+      toast.error("Failed to update category. Please try again.");
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
@@ -100,7 +103,7 @@ const AddCategory = ({ onSuccess }: AddCategoryProps) => {
       return (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Adding...
+          Updating...
         </>
       );
     }
@@ -109,7 +112,7 @@ const AddCategory = ({ onSuccess }: AddCategoryProps) => {
       return (
         <>
           <CheckCircle className="mr-2 h-4 w-4" />
-          Added Successfully!
+          Updated Successfully!
         </>
       );
     }
@@ -123,7 +126,12 @@ const AddCategory = ({ onSuccess }: AddCategoryProps) => {
       );
     }
 
-    return "Add Category";
+    return (
+      <>
+        <Save className="mr-2 h-4 w-4" />
+        Update Category
+      </>
+    );
   };
 
   const getSubmitButtonVariant = () => {
@@ -135,7 +143,7 @@ const AddCategory = ({ onSuccess }: AddCategoryProps) => {
   return (
     <SheetContent>
       <SheetHeader>
-        <SheetTitle className="mb-4">Add Category</SheetTitle>
+        <SheetTitle className="mb-4">Edit Category</SheetTitle>
         <SheetDescription asChild>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -153,7 +161,7 @@ const AddCategory = ({ onSuccess }: AddCategoryProps) => {
                       />
                     </FormControl>
                     <FormDescription>
-                      Enter a unique name for the category. A URL-friendly slug will be generated automatically.
+                      Enter a unique name for the category. A new URL-friendly slug will be generated automatically.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -196,12 +204,9 @@ const AddCategory = ({ onSuccess }: AddCategoryProps) => {
                   type="button" 
                   variant="outline"
                   disabled={isSubmitting}
-                  onClick={() => {
-                    form.reset();
-                    setSubmitStatus('idle');
-                  }}
+                  onClick={onCancel}
                 >
-                  Reset
+                  Cancel
                 </Button>
               </div>
             </form>
@@ -212,4 +217,4 @@ const AddCategory = ({ onSuccess }: AddCategoryProps) => {
   );
 };
 
-export default AddCategory;
+export default EditCategory;

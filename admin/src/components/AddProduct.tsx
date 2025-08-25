@@ -180,6 +180,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
         description: data.description?.trim() || "",
         price: data.price,
         category: data.category || "",
+        subcategory: data.subcategory || "",
         brand: data.brand?.trim() || "",
         stock: data.stock || 0,
         stockStatus: data.stockStatus,

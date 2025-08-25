@@ -1,6 +1,7 @@
 import { db } from "./firebase";
 import { collection, doc, getDoc, getDocs, orderBy, query, where, limit as fsLimit } from "firebase/firestore";
 import { ProductType, ProductsType } from "@/types";
+import { fetchCategoriesWithSubcategories } from "./categories";
 
 const PRODUCTS_COLLECTION = "products";
 
@@ -24,18 +25,53 @@ const mapDocToProduct = (snap: any): ProductType => {
   };
 };
 
+// Convert slug to actual category name
+const getCategoryNameFromSlug = async (categorySlug: string): Promise<string | null> => {
+  try {
+    const categories = await fetchCategoriesWithSubcategories();
+    const category = categories.find(cat => cat.slug === categorySlug);
+    return category ? category.name : null;
+  } catch (error) {
+    console.error("Error fetching categories for slug conversion:", error);
+    return null;
+  }
+};
+
+// Convert slug to actual subcategory name
+const getSubcategoryNameFromSlug = async (subcategorySlug: string, categorySlug: string): Promise<string | null> => {
+  try {
+    const categories = await fetchCategoriesWithSubcategories();
+    const category = categories.find(cat => cat.slug === categorySlug);
+    if (!category) return null;
+    
+    const subcategory = category.subcategories.find(sub => sub.slug === subcategorySlug);
+    return subcategory ? subcategory.name : null;
+  } catch (error) {
+    console.error("Error fetching subcategories for slug conversion:", error);
+    return null;
+  }
+};
+
 export const fetchProducts = async (options: FetchProductsOptions = {}): Promise<ProductsType> => {
   const { categorySlug, subcategorySlug, sort } = options;
 
   const colRef = collection(db, PRODUCTS_COLLECTION);
   const constraints: any[] = [];
 
+  // Convert category slug to actual category name
   if (categorySlug && categorySlug !== "all") {
-    constraints.push(where("category", "==", categorySlug));
+    const categoryName = await getCategoryNameFromSlug(categorySlug);
+    if (categoryName) {
+      constraints.push(where("category", "==", categoryName));
+    }
   }
 
-  if (subcategorySlug) {
-    constraints.push(where("subcategory", "==", subcategorySlug));
+  // Convert subcategory slug to actual subcategory name
+  if (subcategorySlug && categorySlug) {
+    const subcategoryName = await getSubcategoryNameFromSlug(subcategorySlug, categorySlug);
+    if (subcategoryName) {
+      constraints.push(where("subcategory", "==", subcategoryName));
+    }
   }
 
   if (sort === "newest") constraints.push(orderBy("createdAt", "desc"));

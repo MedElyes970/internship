@@ -5,7 +5,7 @@ import Filter from "./Filter";
 import { fetchProducts } from "@/lib/products";
 import { Suspense } from "react";
 
-const ProductsGrid = async ({ category, subcategory, sort }: { category: string; subcategory?: string; sort: string | null }) => {
+const ProductsGrid = async ({ category, subcategory, sort }: { category: string | null; subcategory?: string | null; sort: string | null }) => {
   const data = await fetchProducts({ 
     categorySlug: category, 
     subcategorySlug: subcategory,
@@ -23,7 +23,7 @@ const ProductsGrid = async ({ category, subcategory, sort }: { category: string;
   );
 };
 
-const ProductList = async ({ category, subcategory, params, sort }: { category: string; subcategory?: string; params: "homepage" | "products"; sort: string | null }) => {
+const ProductList = async ({ category, subcategory, params, sort }: { category: string | null; subcategory?: string | null; params: "homepage" | "products"; sort: string | null }) => {
 
   return (
     <div className="w-full">

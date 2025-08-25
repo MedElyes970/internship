@@ -19,6 +19,7 @@ export interface Product {
   description?: string;
   price: number;
   category?: string;
+  subcategory?: string;
   brand?: string;
   images?: string[];
   stock?: number;

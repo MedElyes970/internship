@@ -7,7 +7,6 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  orderBy,
   serverTimestamp,
   where,
 } from "firebase/firestore";
@@ -124,10 +123,7 @@ export const addSubcategory = async (
 // Get all categories
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      orderBy("createdAt", "desc")
-    );
+    const q = query(collection(db, COLLECTION_NAME));
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map((doc) => ({
@@ -143,10 +139,7 @@ export const getCategories = async (): Promise<Category[]> => {
 // Get all subcategories
 export const getSubcategories = async (): Promise<Subcategory[]> => {
   try {
-    const q = query(
-      collection(db, SUBCOLLECTION_NAME),
-      orderBy("createdAt", "desc")
-    );
+    const q = query(collection(db, SUBCOLLECTION_NAME));
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map((doc) => ({
@@ -164,8 +157,7 @@ export const getSubcategoriesByCategoryId = async (categoryId: string): Promise<
   try {
     const q = query(
       collection(db, SUBCOLLECTION_NAME),
-      where("categoryId", "==", categoryId),
-      orderBy("createdAt", "desc")
+      where("categoryId", "==", categoryId)
     );
     const querySnapshot = await getDocs(q);
 

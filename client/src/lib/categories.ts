@@ -1,5 +1,5 @@
 import { db } from "./firebase";
-import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 export type Category = {
   id: string;
@@ -26,7 +26,7 @@ const SUBCOLLECTION_NAME = "subcategories";
 
 export const fetchCategories = async (): Promise<Category[]> => {
   const colRef = collection(db, CATEGORIES_COLLECTION);
-  const q = query(colRef, orderBy("position", "asc"));
+  const q = query(colRef);
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => {
     const data = doc.data() as any;
@@ -41,7 +41,7 @@ export const fetchCategories = async (): Promise<Category[]> => {
 
 export const fetchSubcategories = async (): Promise<Subcategory[]> => {
   const colRef = collection(db, SUBCOLLECTION_NAME);
-  const q = query(colRef, orderBy("position", "asc"));
+  const q = query(colRef);
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => {
     const data = doc.data() as any;
@@ -58,7 +58,7 @@ export const fetchSubcategories = async (): Promise<Subcategory[]> => {
 
 export const fetchSubcategoriesByCategoryId = async (categoryId: string): Promise<Subcategory[]> => {
   const colRef = collection(db, SUBCOLLECTION_NAME);
-  const q = query(colRef, where("categoryId", "==", categoryId), orderBy("position", "asc"));
+  const q = query(colRef, where("categoryId", "==", categoryId));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => {
     const data = doc.data() as any;

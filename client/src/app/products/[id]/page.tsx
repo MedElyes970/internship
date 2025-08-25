@@ -1,33 +1,16 @@
 import ProductInteraction from "@/components/ProductInteraction";
-import { ProductType } from "@/types";
 import Image from "next/image";
-
-// TEMPORARY
-const product: ProductType = {
-  id: 1,
-  name: "Adidas CoreFit T-Shirt",
-  shortDescription:
-    "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-  description:
-    "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-  price: 59.9,
-  images: {
-    gray: "/products/1g.png",
-    purple: "/products/1p.png",
-    green: "/products/1gr.png",
-  },
-};
+import { fetchProductById } from "@/lib/products";
 
 export const generateMetadata = async ({
   params,
 }: {
   params: { id: string };
 }) => {
-  // TODO:get the product from db
-  // TEMPORARY
+  const product = await fetchProductById(params.id);
   return {
-    title: product.name,
-    describe: product.description,
+    title: product?.name || "Product",
+    describe: product?.description || "",
   };
 };
 
@@ -36,6 +19,11 @@ const ProductPage = async ({
 }: {
   params: Promise<{ id: string }>;
 }) => {
+  const { id } = await params;
+  const product = await fetchProductById(id);
+  if (!product) {
+    return <div className="mt-12 text-sm text-gray-500">Product not found.</div>;
+  }
   // Get the first available image
   const firstImage = Object.values(product.images)[0];
   

@@ -37,13 +37,16 @@ import { Loader2, CheckCircle, AlertCircle, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 const formSchema = z.object({
-  name: z.string().min(1, { message: "Product name is required!" }).max(100, { message: "Name must be less than 100 characters" }),
+  name: z
+    .string()
+    .min(1, { message: "Product name is required!" })
+    .max(100, { message: "Name must be less than 100 characters" }),
   description: z.string().optional(),
   price: z.number().min(0.01, { message: "Price must be greater than 0" }),
   category: z.string().optional(),
   brand: z.string().optional(),
   stock: z.number().min(0, { message: "Stock cannot be negative" }).optional(),
-  stockStatus: z.enum(['in-stock', 'sur-commande', 'out-of-stock']).optional(),
+  stockStatus: z.enum(["in-stock", "sur-commande", "out-of-stock"]).optional(),
   images: z.array(z.string()).optional(),
   specs: z.record(z.any()).optional(),
 });
@@ -56,13 +59,16 @@ interface AddProductProps {
 
 const AddProduct = ({ onSuccess }: AddProductProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitStatus, setSubmitStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
   const [categories, setCategories] = useState<Category[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [specs, setSpecs] = useState<Record<string, any>>({});
   const [newSpecKey, setNewSpecKey] = useState("");
   const [newSpecValue, setNewSpecValue] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -86,7 +92,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
         const data = await getCategories();
         setCategories(data);
       } catch (error) {
-        console.error('Error fetching categories:', error);
+        console.error("Error fetching categories:", error);
       }
     };
     fetchCategories();
@@ -96,7 +102,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     if (newImageUrl.trim() && !imageUrls.includes(newImageUrl.trim())) {
       const updatedImages = [...imageUrls, newImageUrl.trim()];
       setImageUrls(updatedImages);
-      form.setValue('images', updatedImages);
+      form.setValue("images", updatedImages);
       setNewImageUrl("");
     }
   };
@@ -104,14 +110,17 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
   const removeImage = (index: number) => {
     const updatedImages = imageUrls.filter((_, i) => i !== index);
     setImageUrls(updatedImages);
-    form.setValue('images', updatedImages);
+    form.setValue("images", updatedImages);
   };
 
   const addSpec = () => {
     if (newSpecKey.trim() && newSpecValue.trim()) {
-      const updatedSpecs = { ...specs, [newSpecKey.trim()]: newSpecValue.trim() };
+      const updatedSpecs = {
+        ...specs,
+        [newSpecKey.trim()]: newSpecValue.trim(),
+      };
       setSpecs(updatedSpecs);
-      form.setValue('specs', updatedSpecs);
+      form.setValue("specs", updatedSpecs);
       setNewSpecKey("");
       setNewSpecValue("");
     }
@@ -121,14 +130,23 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     const updatedSpecs = { ...specs };
     delete updatedSpecs[key];
     setSpecs(updatedSpecs);
-    form.setValue('specs', updatedSpecs);
+    form.setValue("specs", updatedSpecs);
   };
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
-    setSubmitStatus('idle');
+    setSubmitStatus("idle");
 
     try {
+      const uploadedUrls: string[] = [];
+      for (const file of selectedFiles) {
+        const url = await uploadImageToCloudinary(file);
+        uploadedUrls.push(url);
+      }
+
+      // Merge uploaded URLs with any manual URLs
+      const allImageUrls = [...imageUrls, ...uploadedUrls];
+
       // Add product to Firebase
       await addProduct({
         name: data.name.trim(),
@@ -138,16 +156,16 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
         brand: data.brand?.trim() || "",
         stock: data.stock || 0,
         stockStatus: data.stockStatus,
-        images: imageUrls,
+        images: allImageUrls,
         specs: specs,
       });
 
       toast.success("Product added successfully!");
-      setSubmitStatus('success');
+      setSubmitStatus("success");
       form.reset();
       setImageUrls([]);
       setSpecs({});
-      
+
       // Call success callback if provided
       if (onSuccess) {
         onSuccess();
@@ -155,17 +173,16 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
 
       // Reset status after a delay
       setTimeout(() => {
-        setSubmitStatus('idle');
+        setSubmitStatus("idle");
       }, 2000);
-
     } catch (error) {
-      console.error('Error adding product:', error);
+      console.error("Error adding product:", error);
       if (error instanceof Error) {
         toast.error(error.message);
       } else {
         toast.error("Failed to add product. Please try again.");
       }
-      setSubmitStatus('error');
+      setSubmitStatus("error");
     } finally {
       setIsSubmitting(false);
     }
@@ -181,7 +198,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       );
     }
 
-    if (submitStatus === 'success') {
+    if (submitStatus === "success") {
       return (
         <>
           <CheckCircle className="mr-2 h-4 w-4" />
@@ -190,7 +207,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       );
     }
 
-    if (submitStatus === 'error') {
+    if (submitStatus === "error") {
       return (
         <>
           <AlertCircle className="mr-2 h-4 w-4" />
@@ -208,9 +225,51 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
   };
 
   const getSubmitButtonVariant = () => {
-    if (submitStatus === 'success') return 'default';
-    if (submitStatus === 'error') return 'destructive';
-    return 'default';
+    if (submitStatus === "success") return "default";
+    if (submitStatus === "error") return "destructive";
+    return "default";
+  };
+
+  const uploadImageToCloudinary = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "internship"); // replace with your preset
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || "Upload failed");
+
+    return data.secure_url; // the uploaded image URL
+  };
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      setIsSubmitting(true);
+      const uploadedUrl = await uploadImageToCloudinary(file);
+      setImageUrls((prev) => {
+        const updated = [...prev, uploadedUrl];
+        form.setValue("images", updated);
+        return updated;
+      });
+      toast.success("Image uploaded!");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFileSelect = (file: File) => {
+    if (!selectedFiles.includes(file)) {
+      setSelectedFiles((prev) => [...prev, file]);
+    }
   };
 
   return (
@@ -220,11 +279,14 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
           <SheetTitle className="mb-4">Add Product</SheetTitle>
           <SheetDescription asChild>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
                 {/* Basic Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Basic Information</h3>
-                  
+
                   <FormField
                     control={form.control}
                     name="name"
@@ -232,8 +294,8 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       <FormItem>
                         <FormLabel>Product Name *</FormLabel>
                         <FormControl>
-                          <Input 
-                            {...field} 
+                          <Input
+                            {...field}
                             placeholder="Enter product name"
                             disabled={isSubmitting}
                           />
@@ -253,15 +315,16 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            {...field} 
+                          <Textarea
+                            {...field}
                             placeholder="Enter product description"
                             rows={3}
                             disabled={isSubmitting}
                           />
                         </FormControl>
                         <FormDescription>
-                          Provide a detailed description of the product (optional).
+                          Provide a detailed description of the product
+                          (optional).
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -275,12 +338,14 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       <FormItem>
                         <FormLabel>Price *</FormLabel>
                         <FormControl>
-                          <Input 
+                          <Input
                             type="number"
                             step="0.01"
                             min="0.01"
                             {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) =>
+                              field.onChange(parseFloat(e.target.value) || 0)
+                            }
                             placeholder="0.00"
                             disabled={isSubmitting}
                           />
@@ -297,14 +362,17 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                 {/* Category and Brand */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Category & Brand</h3>
-                  
+
                   <FormField
                     control={form.control}
                     name="category"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select a category" />
@@ -312,7 +380,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                           </FormControl>
                           <SelectContent>
                             {categories.map((category) => (
-                              <SelectItem key={category.id} value={category.name}>
+                              <SelectItem
+                                key={category.id}
+                                value={category.name}
+                              >
                                 {category.name}
                               </SelectItem>
                             ))}
@@ -333,8 +404,8 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       <FormItem>
                         <FormLabel>Brand</FormLabel>
                         <FormControl>
-                          <Input 
-                            {...field} 
+                          <Input
+                            {...field}
                             placeholder="Enter brand name"
                             disabled={isSubmitting}
                           />
@@ -351,7 +422,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                 {/* Stock Management */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Stock Management</h3>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -360,11 +431,13 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                         <FormItem>
                           <FormLabel>Stock Quantity</FormLabel>
                           <FormControl>
-                            <Input 
+                            <Input
                               type="number"
                               min="0"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value) || 0)
+                              }
                               placeholder="0"
                               disabled={isSubmitting}
                             />
@@ -383,7 +456,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Stock Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select stock status" />
@@ -391,8 +467,12 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="in-stock">In Stock</SelectItem>
-                              <SelectItem value="sur-commande">Sur Commande</SelectItem>
-                              <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+                              <SelectItem value="sur-commande">
+                                Sur Commande
+                              </SelectItem>
+                              <SelectItem value="out-of-stock">
+                                Out of Stock
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormDescription>
@@ -408,52 +488,107 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                 {/* Images */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Product Images</h3>
-                  
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Enter image URL"
-                        value={newImageUrl}
-                        onChange={(e) => setNewImageUrl(e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                      <Button 
-                        type="button" 
-                        onClick={addImage}
-                        disabled={isSubmitting || !newImageUrl.trim()}
-                        size="sm"
+
+                  {/* Upload Zone */}
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={async (e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) await handleImageUpload(file);
+                    }}
+                    className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:border-primary transition"
+                  >
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="fileUpload"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file);
+                      }}
+                    />
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) handleFileSelect(file);
+                      }}
+                      className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:border-primary transition"
+                    >
+                      <label
+                        htmlFor="fileUpload"
+                        className="cursor-pointer text-muted-foreground"
                       >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                        Drag & drop or{" "}
+                        <span className="text-primary underline">
+                          click to select
+                        </span>
+                      </label>
                     </div>
-                    
-                    {imageUrls.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Added Images:</p>
-                        {imageUrls.map((url, index) => (
-                          <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-md">
-                            <img src={url} alt={`Product ${index + 1}`} className="w-12 h-12 object-cover rounded" />
-                            <span className="flex-1 text-sm truncate">{url}</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeImage(index)}
-                              disabled={isSubmitting}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
+
+                  {/* Add by URL */}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter image URL"
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      disabled={isSubmitting}
+                    />
+                    <Button
+                      type="button"
+                      onClick={addImage}
+                      disabled={isSubmitting || !newImageUrl.trim()}
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Preview Grid */}
+                  {(imageUrls.length > 0 || selectedFiles.length > 0) && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {[
+                        ...imageUrls,
+                        ...selectedFiles.map((f) => URL.createObjectURL(f)),
+                      ].map((src, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={src}
+                            alt={`Product ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg shadow-md group-hover:opacity-90 transition"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Remove either from imageUrls or selectedFiles
+                              if (index < imageUrls.length) {
+                                removeImage(index);
+                              } else {
+                                setSelectedFiles((prev) =>
+                                  prev.filter(
+                                    (_, i) => i !== index - imageUrls.length
+                                  )
+                                );
+                              }
+                            }}
+                            className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Specifications */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Specifications</h3>
-                  
+
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <Input
@@ -469,23 +604,34 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                         disabled={isSubmitting}
                       />
                     </div>
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       onClick={addSpec}
-                      disabled={isSubmitting || !newSpecKey.trim() || !newSpecValue.trim()}
+                      disabled={
+                        isSubmitting ||
+                        !newSpecKey.trim() ||
+                        !newSpecValue.trim()
+                      }
                       size="sm"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Spec
                     </Button>
-                    
+
                     {Object.keys(specs).length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Added Specifications:</p>
+                        <p className="text-sm text-muted-foreground">
+                          Added Specifications:
+                        </p>
                         {Object.entries(specs).map(([key, value]) => (
-                          <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                          <div
+                            key={key}
+                            className="flex items-center justify-between p-2 bg-gray-50 rounded-md"
+                          >
                             <span className="text-sm font-medium">{key}:</span>
-                            <span className="text-sm text-muted-foreground">{value}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {value}
+                            </span>
                             <Button
                               type="button"
                               variant="ghost"
@@ -504,24 +650,24 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
 
                 {/* Submit Buttons */}
                 <div className="flex gap-3 pt-4">
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isSubmitting}
                     variant={getSubmitButtonVariant()}
                     className="flex-1"
                   >
                     {getSubmitButtonContent()}
                   </Button>
-                  
-                  <Button 
-                    type="button" 
+
+                  <Button
+                    type="button"
                     variant="outline"
                     disabled={isSubmitting}
                     onClick={() => {
                       form.reset();
                       setImageUrls([]);
                       setSpecs({});
-                      setSubmitStatus('idle');
+                      setSubmitStatus("idle");
                     }}
                   >
                     Reset

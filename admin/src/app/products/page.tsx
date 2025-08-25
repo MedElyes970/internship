@@ -1,129 +1,306 @@
-import { Product, columns } from "./columns";
-import { DataTable } from "./data-table";
+"use client";
 
-const getData = async (): Promise<Product[]> => {
-  return [
-    {
-      id: 1,
-      name: "Adidas CoreFit T-Shirt",
-      shortDescription:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      description:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      price: 39.9,
-      sizes: ["s", "m", "l", "xl", "xxl"],
-      colors: ["gray", "purple", "green"],
-      images: {
-        gray: "/products/1g.png",
-        purple: "/products/1p.png",
-        green: "/products/1gr.png",
-      },
-    },
-    {
-      id: 2,
-      name: "Puma Ultra Warm Zip",
-      shortDescription:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      description:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      price: 59.9,
-      sizes: ["s", "m", "l", "xl"],
-      colors: ["gray", "green"],
-      images: { gray: "/products/2g.png", green: "/products/2gr.png" },
-    },
-    {
-      id: 3,
-      name: "Nike Air Essentials Pullover",
-      shortDescription:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      description:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      price: 69.9,
-      sizes: ["s", "m", "l"],
-      colors: ["green", "blue", "black"],
-      images: {
-        green: "/products/3gr.png",
-        blue: "/products/3b.png",
-        black: "/products/3bl.png",
-      },
-    },
-    {
-      id: 4,
-      name: "Nike Dri Flex T-Shirt",
-      shortDescription:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      description:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      price: 29.9,
-      sizes: ["s", "m", "l"],
-      colors: ["white", "pink"],
-      images: { white: "/products/4w.png", pink: "/products/4p.png" },
-    },
-    {
-      id: 5,
-      name: "Under Armour StormFleece",
-      shortDescription:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      description:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      price: 49.9,
-      sizes: ["s", "m", "l"],
-      colors: ["red", "orange", "black"],
-      images: {
-        red: "/products/5r.png",
-        orange: "/products/5o.png",
-        black: "/products/5bl.png",
-      },
-    },
-    {
-      id: 6,
-      name: "Nike Air Max 270",
-      shortDescription:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      description:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      price: 59.9,
-      sizes: ["40", "42", "43", "44"],
-      colors: ["gray", "white"],
-      images: { gray: "/products/6g.png", white: "/products/6w.png" },
-    },
-    {
-      id: 7,
-      name: "Nike Ultraboost Pulse ",
-      shortDescription:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      description:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      price: 69.9,
-      sizes: ["40", "42", "43"],
-      colors: ["gray", "pink"],
-      images: { gray: "/products/7g.png", pink: "/products/7p.png" },
-    },
-    {
-      id: 8,
-      name: "Levi’s Classic Denim",
-      shortDescription:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      description:
-        "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-      price: 59.9,
-      sizes: ["s", "m", "l"],
-      colors: ["blue", "green"],
-      images: { blue: "/products/8b.png", green: "/products/8gr.png" },
-    },
-  ];
-};
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash2, Calendar, Package, Search, Filter } from "lucide-react";
+import { getProducts, deleteProduct, Product, getStockStatusColor, getStockStatusText } from "@/lib/products";
+import { toast } from "sonner";
+import AddProduct from "@/components/AddProduct";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 
-const PaymentsPage = async () => {
-  const data = await getData();
+export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await getProducts();
+      setProducts(data);
+      setFilteredProducts(data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast.error("Failed to fetch products");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  // Filter products based on search term and category
+  useEffect(() => {
+    let filtered = products;
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.brand?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by category
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(product => product.category === selectedCategory);
+    }
+
+    setFilteredProducts(filtered);
+  }, [searchTerm, selectedCategory, products]);
+
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete the product "${name}"?`)) {
+      return;
+    }
+
+    try {
+      await deleteProduct(id);
+      toast.success(`Product "${name}" deleted successfully`);
+      fetchProducts(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error("Failed to delete product");
+    }
+  };
+
+  const handleAddSuccess = () => {
+    setIsAddSheetOpen(false);
+    fetchProducts(); // Refresh the list
+  };
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return "N/A";
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString();
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(price);
+  };
+
+  // Get unique categories for filter
+  const categories = ["all", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+
+  if (loading) {
   return (
-    <div className="">
-      <div className="mb-8 px-4 py-2 bg-secondary rounded-md">
-        <h1 className="font-semibold">All Products</h1>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-lg">Loading products...</p>
       </div>
-      <DataTable columns={columns} data={data} />
     </div>
   );
-};
+  }
 
-export default PaymentsPage;
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Products</h1>
+          <p className="text-muted-foreground">
+            Manage your product catalog
+          </p>
+        </div>
+        
+        <Sheet open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen}>
+          <SheetTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
+          </SheetTrigger>
+          <SheetContent>
+            <AddProduct onSuccess={handleAddSuccess} />
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-gray-400" />
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category === "all" ? "All Categories" : category}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Products Grid */}
+      {filteredProducts.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Package className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              {searchTerm || selectedCategory !== "all" ? "No products found" : "No products yet"}
+            </h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {searchTerm || selectedCategory !== "all" 
+                ? "Try adjusting your search or filters."
+                : "Get started by creating your first product."
+              }
+            </p>
+            {!searchTerm && selectedCategory === "all" && (
+              <Button onClick={() => setIsAddSheetOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Product
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1 flex-1">
+                    <CardTitle className="text-lg line-clamp-2">{product.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {product.description || "No description"}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-3">
+                {/* Product Image */}
+                {product.images && product.images.length > 0 && (
+                  <div className="aspect-square overflow-hidden rounded-md bg-gray-100">
+                    <img 
+                      src={product.images[0]} 
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
+                {/* Price and Stock */}
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-bold text-green-600">
+                    {formatPrice(product.price)}
+                  </span>
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-xs ${getStockStatusColor(product.stockStatus)}`}
+                  >
+                    {getStockStatusText(product.stockStatus)}
+                  </Badge>
+                </div>
+
+                {/* Category and Brand */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {product.category && (
+                    <Badge variant="outline" className="text-xs">
+                      {product.category}
+                    </Badge>
+                  )}
+                  {product.brand && (
+                    <Badge variant="outline" className="text-xs">
+                      {product.brand}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Stock Quantity */}
+                {product.stock !== undefined && (
+                  <div className="text-sm text-muted-foreground">
+                    Stock: {product.stock} units
+                  </div>
+                )}
+
+                {/* Created Date */}
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  Created: {formatDate(product.createdAt)}
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" size="sm" className="flex-1">
+                    <Edit className="mr-2 h-3 w-3" />
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1 text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteProduct(product.id!, product.name)}
+                  >
+                    <Trash2 className="mr-2 h-3 w-3" />
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Stats */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Statistics</CardTitle>
+          <CardDescription>Overview of your product catalog</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{products.length}</div>
+              <div className="text-sm text-muted-foreground">Total Products</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {products.filter(p => p.stock && p.stock > 0).length}
+              </div>
+              <div className="text-sm text-muted-foreground">In Stock</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {products.filter(p => p.category).length}
+              </div>
+              <div className="text-sm text-muted-foreground">With Category</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {products.length > 0 ? formatDate(products[0].createdAt) : "N/A"}
+              </div>
+              <div className="text-sm text-muted-foreground">Latest Added</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

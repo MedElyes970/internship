@@ -6,9 +6,10 @@ import ProductGallery from "@/components/ProductGallery";
 export const generateMetadata = async ({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) => {
-  const product = await fetchProductById(params.id);
+  const { id } = await params;
+  const product = await fetchProductById(id);
   return {
     title: product?.name || "Product",
     describe: product?.description || "",

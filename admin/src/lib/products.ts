@@ -9,7 +9,8 @@ import {
   query,
   orderBy,
   serverTimestamp,
-  where 
+  where,
+  increment 
 } from 'firebase/firestore';
 
 export interface Product {
@@ -25,6 +26,7 @@ export interface Product {
   createdAt?: any;
   updatedAt?: any;
   specs?: Record<string, any>;
+  salesCount?: number;
 }
 
 const COLLECTION_NAME = 'products';
@@ -68,6 +70,7 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
     const docRef = await addDoc(collection(db, COLLECTION_NAME), {
       ...productData,
       stockStatus,
+      salesCount: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -76,6 +79,7 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
       id: docRef.id,
       ...productData,
       stockStatus,
+      salesCount: 0,
     };
   } catch (error) {
     console.error('Error adding product:', error);
@@ -178,8 +182,12 @@ export const updateProduct = async (id: string, updates: Partial<Product>) => {
     }
 
     const productRef = doc(db, COLLECTION_NAME, id);
+
+    // Ensure backend-managed fields cannot be modified here
+    const { salesCount: _ignoredSalesCount, createdAt: _ignoreCreatedAt, ...safeUpdates } = updates as any;
+
     await updateDoc(productRef, {
-      ...updates,
+      ...safeUpdates,
       updatedAt: serverTimestamp(),
     });
     
@@ -187,6 +195,27 @@ export const updateProduct = async (id: string, updates: Partial<Product>) => {
   } catch (error) {
     console.error('Error updating product:', error);
     throw new Error('Failed to update product');
+  }
+};
+
+// Atomically increment salesCount (backend-managed)
+export const incrementSalesCount = async (id: string, amount: number = 1) => {
+  try {
+    if (!id) {
+      throw new Error('Product ID is required');
+    }
+    if (!Number.isFinite(amount)) {
+      throw new Error('Increment amount must be a finite number');
+    }
+    const productRef = doc(db, COLLECTION_NAME, id);
+    await updateDoc(productRef, {
+      salesCount: increment(amount),
+      updatedAt: serverTimestamp(),
+    });
+    return true;
+  } catch (error) {
+    console.error('Error incrementing salesCount:', error);
+    throw new Error('Failed to increment sales count');
   }
 };
 

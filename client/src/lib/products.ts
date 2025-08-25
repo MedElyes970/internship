@@ -19,6 +19,7 @@ const mapDocToProduct = (snap: any): ProductType => {
     description: data.description ?? "",
     price: typeof data.price === "number" ? data.price : Number(data.price ?? 0),
     images: data.images ?? {},
+    salesCount: typeof data.salesCount === "number" ? data.salesCount : 0,
   };
 };
 

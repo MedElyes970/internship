@@ -7,6 +7,7 @@ export type ProductType = {
   description: string;
   price: number;
   images: Record<string, string>;
+  salesCount?: number;
 };
 
 export type ProductsType = ProductType[];

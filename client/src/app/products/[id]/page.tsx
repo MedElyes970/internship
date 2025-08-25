@@ -1,6 +1,7 @@
 import ProductInteraction from "@/components/ProductInteraction";
 import Image from "next/image";
 import { fetchProductById } from "@/lib/products";
+import ProductGallery from "@/components/ProductGallery";
 
 export const generateMetadata = async ({
   params,
@@ -25,18 +26,11 @@ const ProductPage = async ({
     return <div className="mt-12 text-sm text-gray-500">Product not found.</div>;
   }
   // Get the first available image
-  const firstImage = Object.values(product.images)[0];
-  
   return (
     <div className="flex flex-col gap-4 lg:flex-row md:gap-12 mt-12">
       {/* IMAGE */}
-      <div className="w-full lg:w-5/12 relative aspect-[2/3]">
-        <Image
-          src={firstImage}
-          alt={product.name}
-          fill
-          className="object-contain rounded-md"
-        />
+      <div className="w-full lg:w-5/12">
+        <ProductGallery images={product.images} />
       </div>
       {/* DETAILS */}
       <div className="w-full lg:w-7/12 flex flex-col gap-4">

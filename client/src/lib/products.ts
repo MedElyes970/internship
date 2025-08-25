@@ -1,5 +1,5 @@
 import { db } from "./firebase";
-import { collection, doc, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, where, limit as fsLimit } from "firebase/firestore";
 import { ProductType, ProductsType } from "@/types";
 
 const PRODUCTS_COLLECTION = "products";
@@ -47,6 +47,19 @@ export const fetchProductById = async (id: string): Promise<ProductType | null> 
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
   return mapDocToProduct(snap);
+};
+
+export const fetchDistinctProductCategories = async (max: number = 200): Promise<string[]> => {
+  // Note: Firestore has no DISTINCT, so we fetch up to `max` docs and derive categories client-side.
+  const colRef = collection(db, PRODUCTS_COLLECTION);
+  const q = query(colRef, fsLimit(max));
+  const snapshot = await getDocs(q);
+  const set = new Set<string>();
+  snapshot.forEach((d) => {
+    const cat = (d.data() as any)?.category;
+    if (typeof cat === "string" && cat.trim().length > 0) set.add(cat);
+  });
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
 };
 
 

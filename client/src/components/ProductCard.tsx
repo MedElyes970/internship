@@ -4,6 +4,7 @@ import useCartStore from "@/stores/cartStore";
 import { ProductType } from "@/types";
 import { ShoppingCart } from "lucide-react";
 import Image from "next/image";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 
@@ -18,19 +19,30 @@ const ProductCard = ({ product }: { product: ProductType }) => {
     toast.success("Product added to cart")
   };
 
-  // Get the first available image
-  const firstImage = Object.values(product.images)[0];
+  const images = useMemo(() => Object.values(product.images) as string[], [product.images]);
+  const primary = images[0];
+  const secondary = images[1] || images[0];
+  const [hovered, setHovered] = useState(false);
 
   return (
     <div className="shadow-lg rounded-lg overflow-hidden">
       {/* IMAGE */}
       <Link href={`/products/${product.id}`}>
-        <div className="relative aspect-[2/3]">
+        <div className="relative aspect-[2/3]" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+          {/* Base image */}
           <Image
-            src={firstImage}
+            src={primary}
             alt={product.name}
             fill
-            className="object-cover hover:scale-105 transition-all duration-300"
+            priority
+            className={`object-cover transition-opacity duration-300 ${hovered ? "opacity-0" : "opacity-100"}`}
+          />
+          {/* Hover image crossfade */}
+          <Image
+            src={secondary}
+            alt={product.name}
+            fill
+            className={`object-cover transition-opacity duration-300 ${hovered ? "opacity-100" : "opacity-0"}`}
           />
         </div>
       </Link>

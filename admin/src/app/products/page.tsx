@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Calendar, Package, Search, Filter } from "lucide-react";
 import { getProducts, deleteProduct, Product, getStockStatusColor, getStockStatusText } from "@/lib/products";
+import { getCategoriesWithSubcategories } from "@/lib/categories";
 import { toast } from "sonner";
 import AddProduct from "@/components/AddProduct";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -91,8 +92,24 @@ export default function ProductsPage() {
     }).format(price);
   };
 
-  // Get unique categories for filter
-  const categories = ["all", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+  // Get categories from database
+  const [categories, setCategories] = useState<string[]>(["all"]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategoriesWithSubcategories();
+        const categoryNames = data.map(cat => cat.name).filter(Boolean);
+        setCategories(["all", ...categoryNames]);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        // Fallback to product-derived categories
+        const productCategories = Array.from(new Set(products.map(p => p.category || "").filter(Boolean)));
+        setCategories(["all", ...productCategories]);
+      }
+    };
+    fetchCategories();
+  }, [products]);
 
   if (loading) {
   return (

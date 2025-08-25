@@ -6,6 +6,7 @@ const PRODUCTS_COLLECTION = "products";
 
 export type FetchProductsOptions = {
   categorySlug?: string | null;
+  subcategorySlug?: string | null;
   sort?: "newest" | "oldest" | "asc" | "desc";
   limitCount?: number;
 };
@@ -24,13 +25,17 @@ const mapDocToProduct = (snap: any): ProductType => {
 };
 
 export const fetchProducts = async (options: FetchProductsOptions = {}): Promise<ProductsType> => {
-  const { categorySlug, sort } = options;
+  const { categorySlug, subcategorySlug, sort } = options;
 
   const colRef = collection(db, PRODUCTS_COLLECTION);
   const constraints: any[] = [];
 
   if (categorySlug && categorySlug !== "all") {
     constraints.push(where("category", "==", categorySlug));
+  }
+
+  if (subcategorySlug) {
+    constraints.push(where("subcategory", "==", subcategorySlug));
   }
 
   if (sort === "newest") constraints.push(orderBy("createdAt", "desc"));

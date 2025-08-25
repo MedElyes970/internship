@@ -11,6 +11,7 @@ import {
   User,
   ShoppingBasket,
   Hash,
+  Folder,
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,6 +42,7 @@ import AddOrder from "./AddOrder";
 import AddUser from "./AddUser";
 import AddCategory from "./AddCategory";
 import AddProduct from "./AddProduct";
+import AddSubcategory from "./AddSubcategory";
 
 const items = [
   {
@@ -168,6 +170,40 @@ const AppSidebar = () => {
                       </SidebarMenuButton>
                     </SheetTrigger>
                     <AddCategory />
+                  </Sheet>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Subcategories</SidebarGroupLabel>
+          <SidebarGroupAction>
+            <Plus /> <span className="sr-only">Add Subcategory</span>
+          </SidebarGroupAction>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/categories">
+                    <Folder />
+                    See All Subcategories
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <SidebarMenuButton asChild>
+                        <Link href="#">
+                          <Plus />
+                          Add Subcategory
+                        </Link>
+                      </SidebarMenuButton>
+                    </SheetTrigger>
+                    <AddSubcategory />
                   </Sheet>
                 </SidebarMenuButton>
               </SidebarMenuItem>

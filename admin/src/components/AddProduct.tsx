@@ -32,7 +32,7 @@ import {
 import { Checkbox } from "./ui/checkbox";
 import { ScrollArea } from "./ui/scroll-area";
 import { addProduct, Product } from "@/lib/products";
-import { getCategories, Category } from "@/lib/categories";
+import { getCategories, getSubcategoriesByCategoryId, Category, Subcategory } from "@/lib/categories";
 import { Loader2, CheckCircle, AlertCircle, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +44,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   price: z.number().min(0.01, { message: "Price must be greater than 0" }),
   category: z.string().optional(),
+  subcategory: z.string().optional(),
   brand: z.string().optional(),
   stock: z.number().min(0, { message: "Stock cannot be negative" }).optional(),
   stockStatus: z.enum(["in-stock", "sur-commande", "out-of-stock"]).optional(),
@@ -63,6 +64,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     "idle" | "success" | "error"
   >("idle");
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [specs, setSpecs] = useState<Record<string, any>>({});
@@ -77,6 +79,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       description: "",
       price: 0,
       category: "",
+      subcategory: "",
       brand: "",
       stock: 0,
       stockStatus: "in-stock",
@@ -97,6 +100,30 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     };
     fetchCategories();
   }, []);
+
+  // Fetch subcategories when category changes
+  const selectedCategory = form.watch("category");
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (selectedCategory) {
+        try {
+          const category = categories.find(cat => cat.name === selectedCategory);
+          if (category) {
+            const data = await getSubcategoriesByCategoryId(category.id!);
+            setSubcategories(data);
+          } else {
+            setSubcategories([]);
+          }
+        } catch (error) {
+          console.error("Error fetching subcategories:", error);
+          setSubcategories([]);
+        }
+      } else {
+        setSubcategories([]);
+      }
+    };
+    fetchSubcategories();
+  }, [selectedCategory, categories]);
 
   const addImage = () => {
     if (newImageUrl.trim() && !imageUrls.includes(newImageUrl.trim())) {
@@ -370,7 +397,11 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       <FormItem>
                         <FormLabel>Category</FormLabel>
                         <Select
-                          onValueChange={field.onChange}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Reset subcategory when category changes
+                            form.setValue("subcategory", "");
+                          }}
                           value={field.value}
                         >
                           <FormControl>
@@ -391,6 +422,41 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                         </Select>
                         <FormDescription>
                           Select the category this product belongs to.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="subcategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory (Optional)</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={!selectedCategory || subcategories.length === 0}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={!selectedCategory ? "Select a category first" : subcategories.length === 0 ? "No subcategories available" : "Select a subcategory"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {subcategories.map((subcategory) => (
+                              <SelectItem
+                                key={subcategory.id}
+                                value={subcategory.name}
+                              >
+                                {subcategory.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Select a subcategory for more specific organization (optional).
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

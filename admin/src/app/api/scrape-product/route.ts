@@ -42,10 +42,19 @@ export async function POST(request: NextRequest) {
     console.log(`Number of H1 tags: ${$('h1').length}`);
     console.log(`Number of H2 tags: ${$('h2').length}`);
     console.log(`Number of H3 tags: ${$('h3').length}`);
+    console.log(`Number of IMG tags: ${$('img').length}`);
     
     // Log all H1 tags for debugging
     $('h1').each((i, el) => {
       console.log(`H1[${i}]: "${$(el).text().trim()}"`);
+    });
+    
+    // Log some image information for debugging
+    $('img').slice(0, 10).each((i, el) => {
+      const src = $(el).attr('src') || $(el).attr('data-src');
+      const alt = $(el).attr('alt') || '';
+      const className = $(el).attr('class') || '';
+      console.log(`IMG[${i}]: src="${src}", alt="${alt}", class="${className}"`);
     });
 
     // Extract product information based on common selectors
@@ -329,34 +338,200 @@ export async function POST(request: NextRequest) {
       $('meta[property="product:brand"]').attr('content') ||
       '';
 
-    // Images - try multiple common selectors
+    // Images - try multiple common selectors with better targeting
     const images: string[] = [];
-    $('img.product-image, img.main-image, .product-gallery img, .gallery img').each((_, el) => {
-      const src = $(el).attr('src') || $(el).attr('data-src');
-      if (src && !src.includes('placeholder') && !src.includes('logo')) {
-        // Convert relative URLs to absolute
-        const absoluteUrl = src.startsWith('http') ? src : new URL(src, normalizedUrl).href;
-        images.push(absoluteUrl);
-      }
-    });
+    
+    // Website-specific image selectors
+    let imageSelectors = [];
+    
+    if (isTunisianet) {
+      imageSelectors = [
+        '.product-image img',
+        '.product-gallery img',
+        '.product-photos img',
+        '.product-images img',
+        '.gallery img',
+        'img[data-zoom-image]',
+        'img[data-large-image]',
+        'img[data-image]',
+        '.zoom-image',
+        '.large-image',
+        // Additional Tunisianet-specific selectors
+        '.product-thumb img',
+        '.product-thumbnail img',
+        '.product-preview img',
+        'img[data-thumb]',
+        'img[data-preview]',
+        '.product-main img',
+        '.product-content img',
+        '.product-details img'
+      ];
+    } else if (isMytek) {
+      imageSelectors = [
+        '.product-image img',
+        '.product-gallery img',
+        '.product-photos img',
+        '.gallery img',
+        'img[data-zoom-image]',
+        'img[data-large-image]'
+      ];
+    } else if (isJumia) {
+      imageSelectors = [
+        '.product-image img',
+        '.product-gallery img',
+        '.gallery img',
+        'img[data-zoom-image]',
+        'img[data-large-image]'
+      ];
+    } else {
+      // Generic selectors
+      imageSelectors = [
+        'img.product-image',
+        'img.main-image',
+        '.product-gallery img',
+        '.gallery img',
+        'img[data-zoom-image]',
+        'img[data-large-image]'
+      ];
+    }
 
-    // If no specific product images found, try general images
+    // Try website-specific selectors first
+    console.log(`Trying ${imageSelectors.length} image selectors...`);
+    for (const selector of imageSelectors) {
+      const elements = $(selector);
+      console.log(`Selector "${selector}" found ${elements.length} elements`);
+      
+      elements.each((_, el) => {
+        const src = $(el).attr('src') || $(el).attr('data-src') || $(el).attr('data-zoom-image') || $(el).attr('data-large-image');
+        console.log(`Found image with selector "${selector}": src="${src}"`);
+        
+        if (src && !src.includes('placeholder') && !src.includes('logo') && !src.includes('icon')) {
+          // Convert relative URLs to absolute
+          const absoluteUrl = src.startsWith('http') ? src : new URL(src, normalizedUrl).href;
+          if (!images.includes(absoluteUrl)) {
+            console.log(`Adding image: ${absoluteUrl}`);
+            images.push(absoluteUrl);
+          }
+        }
+      });
+    }
+
+    // If still no images, try more aggressive selectors
     if (images.length === 0) {
+      console.log('No images found with specific selectors, trying all images...');
+      
+      // Look for any image that might be a product image
       $('img').each((_, el) => {
         const src = $(el).attr('src') || $(el).attr('data-src');
+        const alt = $(el).attr('alt') || '';
+        const className = $(el).attr('class') || '';
+        
         if (src && 
             !src.includes('placeholder') && 
             !src.includes('logo') && 
             !src.includes('icon') &&
-            (src.includes('product') || src.includes('item') || src.includes('goods'))) {
+            !src.includes('banner') &&
+            !src.includes('advertisement') &&
+            !src.includes('social') &&
+            src.length > 10 && // Avoid very short URLs
+            (src.includes('product') || 
+             src.includes('item') || 
+             src.includes('goods') ||
+             src.includes('camera') ||
+             src.includes('surveillance') ||
+             alt.toLowerCase().includes('product') ||
+             alt.toLowerCase().includes('camera') ||
+             className.toLowerCase().includes('product'))) {
+          
           const absoluteUrl = src.startsWith('http') ? src : new URL(src, normalizedUrl).href;
-          images.push(absoluteUrl);
+          if (!images.includes(absoluteUrl)) {
+            console.log(`Found potential product image: ${absoluteUrl}`);
+            images.push(absoluteUrl);
+          }
+        }
+      });
+    }
+
+    // Additional fallback: look for images in product-related containers
+    if (images.length === 0) {
+      console.log('Still no images, trying product containers...');
+      
+      const productContainers = [
+        '.product',
+        '.product-details',
+        '.product-info',
+        '.product-main',
+        '.product-content',
+        '.product-wrapper',
+        '.product-container',
+        '.product-box',
+        '.item',
+        '.goods'
+      ];
+      
+      for (const containerSelector of productContainers) {
+        $(containerSelector).find('img').each((_, el) => {
+          const src = $(el).attr('src') || $(el).attr('data-src');
+          if (src && 
+              !src.includes('placeholder') && 
+              !src.includes('logo') && 
+              !src.includes('icon') &&
+              src.length > 10) {
+            const absoluteUrl = src.startsWith('http') ? src : new URL(src, normalizedUrl).href;
+            if (!images.includes(absoluteUrl)) {
+              console.log(`Found image in container ${containerSelector}: ${absoluteUrl}`);
+              images.push(absoluteUrl);
+            }
+          }
+        });
+      }
+    }
+
+    // Last resort: look for any image with product-related attributes or content
+    if (images.length === 0) {
+      console.log('Last resort: looking for any product-related images...');
+      
+      $('img').each((_, el) => {
+        const src = $(el).attr('src') || $(el).attr('data-src');
+        const alt = $(el).attr('alt') || '';
+        const title = $(el).attr('title') || '';
+        const parentClass = $(el).parent().attr('class') || '';
+        const grandParentClass = $(el).parent().parent().attr('class') || '';
+        
+        if (src && 
+            !src.includes('placeholder') && 
+            !src.includes('logo') && 
+            !src.includes('icon') &&
+            !src.includes('banner') &&
+            !src.includes('advertisement') &&
+            !src.includes('social') &&
+            src.length > 10 &&
+            (alt.toLowerCase().includes('camera') ||
+             alt.toLowerCase().includes('surveillance') ||
+             alt.toLowerCase().includes('product') ||
+             title.toLowerCase().includes('camera') ||
+             title.toLowerCase().includes('surveillance') ||
+             title.toLowerCase().includes('product') ||
+             parentClass.toLowerCase().includes('product') ||
+             parentClass.toLowerCase().includes('camera') ||
+             grandParentClass.toLowerCase().includes('product') ||
+             grandParentClass.toLowerCase().includes('camera'))) {
+          
+          const absoluteUrl = src.startsWith('http') ? src : new URL(src, normalizedUrl).href;
+          if (!images.includes(absoluteUrl)) {
+            console.log(`Found product-related image: ${absoluteUrl} (alt: "${alt}", title: "${title}")`);
+            images.push(absoluteUrl);
+          }
         }
       });
     }
 
     // Limit to first 5 images
     scrapedData.images = images.slice(0, 5);
+    
+    // Debug: Log the final image results
+    console.log(`Total images found: ${images.length}`);
+    console.log(`Final images array:`, scrapedData.images);
 
     // Specifications - try to extract from product details
     const specs: Record<string, any> = {};

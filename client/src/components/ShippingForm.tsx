@@ -1,23 +1,48 @@
+"use client";
+
 import { ShippingFormInputs, shippingFormSchema } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SubmitHandler, useForm } from "react-hook-form";
+import { useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 
-const ShippingForm = ({
-  setShippingForm,
-}: {
+interface Props {
   setShippingForm: (data: ShippingFormInputs) => void;
-}) => {
+}
+
+const ShippingForm = ({ setShippingForm }: Props) => {
+  const { user } = useAuth();
+  const router = useRouter();
+
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm<ShippingFormInputs>({
     resolver: zodResolver(shippingFormSchema),
   });
 
-  const router = useRouter();
+  useEffect(() => {
+    const fetchShippingInfo = async () => {
+      if (!user) return;
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          if (data.shippingInfo) reset(data.shippingInfo);
+        }
+      } catch (error) {
+        console.error("Error fetching shipping info:", error);
+      }
+    };
+    fetchShippingInfo();
+  }, [user, reset]);
 
   const handleShippingForm: SubmitHandler<ShippingFormInputs> = (data) => {
     setShippingForm(data);
@@ -29,158 +54,40 @@ const ShippingForm = ({
       className="flex flex-col gap-4"
       onSubmit={handleSubmit(handleShippingForm)}
     >
-      {/* NAME */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="name" className="text-xs text-gray-500 font-medium">
-          Name
-        </label>
-        <input
-          className="border-b border-gray-200 py-2 outline-none text-sm"
-          type="text"
-          id="name"
-          placeholder="John Doe"
-          {...register("name")}
-        />
-        {errors.name && (
-          <p className="text-xs text-red-500">{errors.name.message}</p>
-        )}
-      </div>
-
-      {/* EMAIL */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="email" className="text-xs text-gray-500 font-medium">
-          Email
-        </label>
-        <input
-          className="border-b border-gray-200 py-2 outline-none text-sm"
-          type="email"
-          id="email"
-          placeholder="johndoe@gmail.com"
-          {...register("email")}
-        />
-        {errors.email && (
-          <p className="text-xs text-red-500">{errors.email.message}</p>
-        )}
-      </div>
-
-      {/* PHONE */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="phone" className="text-xs text-gray-500 font-medium">
-          Phone
-        </label>
-        <input
-          className="border-b border-gray-200 py-2 outline-none text-sm"
-          type="text"
-          id="phone"
-          placeholder="123456789"
-          {...register("phone")}
-        />
-        {errors.phone && (
-          <p className="text-xs text-red-500">{errors.phone.message}</p>
-        )}
-      </div>
-
-      {/* ADDRESS */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="address" className="text-xs text-gray-500 font-medium">
-          Address
-        </label>
-        <input
-          className="border-b border-gray-200 py-2 outline-none text-sm"
-          type="text"
-          id="address"
-          placeholder="123 Main St"
-          {...register("address")}
-        />
-        {errors.address && (
-          <p className="text-xs text-red-500">{errors.address.message}</p>
-        )}
-      </div>
-
-      {/* APARTMENT / UNIT (optional) */}
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="apartment"
-          className="text-xs text-gray-500 font-medium"
-        >
-          Apartment / Unit (optional)
-        </label>
-        <input
-          className="border-b border-gray-200 py-2 outline-none text-sm"
-          type="text"
-          id="apartment"
-          placeholder="Apt 101"
-          {...register("apartment")}
-        />
-      </div>
-
-      {/* CITY */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="city" className="text-xs text-gray-500 font-medium">
-          City
-        </label>
-        <input
-          className="border-b border-gray-200 py-2 outline-none text-sm"
-          type="text"
-          id="city"
-          placeholder="New York"
-          {...register("city")}
-        />
-        {errors.city && (
-          <p className="text-xs text-red-500">{errors.city.message}</p>
-        )}
-      </div>
-
-      {/* STATE */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="state" className="text-xs text-gray-500 font-medium">
-          State / Province
-        </label>
-        <input
-          className="border-b border-gray-200 py-2 outline-none text-sm"
-          type="text"
-          id="state"
-          placeholder="NY"
-          {...register("state")}
-        />
-        {errors.state && (
-          <p className="text-xs text-red-500">{errors.state.message}</p>
-        )}
-      </div>
-
-      {/* ZIP */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="zip" className="text-xs text-gray-500 font-medium">
-          ZIP / Postal Code
-        </label>
-        <input
-          className="border-b border-gray-200 py-2 outline-none text-sm"
-          type="text"
-          id="zip"
-          placeholder="10001"
-          {...register("zip")}
-        />
-        {errors.zip && (
-          <p className="text-xs text-red-500">{errors.zip.message}</p>
-        )}
-      </div>
-
-      {/* COUNTRY */}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="country" className="text-xs text-gray-500 font-medium">
-          Country
-        </label>
-        <input
-          className="border-b border-gray-200 py-2 outline-none text-sm"
-          type="text"
-          id="country"
-          placeholder="USA"
-          {...register("country")}
-        />
-        {errors.country && (
-          <p className="text-xs text-red-500">{errors.country.message}</p>
-        )}
-      </div>
+      {[
+        { id: "name", label: "Name", type: "text" },
+        { id: "email", label: "Email", type: "email" },
+        { id: "phone", label: "Phone", type: "text" },
+        { id: "address", label: "Address", type: "text" },
+        {
+          id: "apartment",
+          label: "Apartment / Unit (optional)",
+          type: "text",
+          optional: true,
+        },
+        { id: "city", label: "City", type: "text" },
+        { id: "state", label: "State / Province", type: "text" },
+        { id: "zip", label: "ZIP / Postal Code", type: "text" },
+        { id: "country", label: "Country", type: "text" },
+      ].map(({ id, label, type, optional }) => (
+        <div key={id} className="flex flex-col gap-1">
+          <label htmlFor={id} className="text-xs text-gray-500 font-medium">
+            {label}
+          </label>
+          <input
+            id={id}
+            type={type}
+            placeholder={label}
+            className="border-b border-gray-200 py-2 outline-none text-sm"
+            {...register(id as keyof ShippingFormInputs)}
+          />
+          {!optional && errors[id as keyof ShippingFormInputs] && (
+            <p className="text-xs text-red-500">
+              {errors[id as keyof ShippingFormInputs]?.message as string}
+            </p>
+          )}
+        </div>
+      ))}
 
       {/* BUTTONS */}
       <div className="flex gap-4 mt-4">

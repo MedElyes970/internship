@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   updateProfile,
@@ -125,6 +125,19 @@ const ProfilePage = () => {
       });
     }
   }, [user]);
+
+  // Scroll to order history when showOrders parameter is true
+  useEffect(() => {
+    if (searchParams.get('showOrders') === 'true' && orderHistoryRef.current) {
+      // Small delay to ensure the component is rendered
+      setTimeout(() => {
+        orderHistoryRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  }, [searchParams]);
 
   // Clear verification message when user verifies email
   useEffect(() => {
@@ -599,20 +612,23 @@ const ProfilePage = () => {
           </form>
         </div>
 
-        {/* Order History Section */}
-        <div className="w-full max-w-3xl shadow-lg border border-gray-100 p-8 rounded-lg flex flex-col gap-6 bg-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-800">Order History</h2>
-            </div>
-            <button
-              onClick={() => setShowOrderHistory(!showOrderHistory)}
-              className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              {showOrderHistory ? "Hide" : "Show"} ({userOrders.length})
-            </button>
-          </div>
+                 {/* Order History Section */}
+         <div ref={orderHistoryRef} className="w-full max-w-3xl shadow-lg border border-gray-100 p-8 rounded-lg flex flex-col gap-6 bg-white">
+                     <div className="flex items-center justify-between">
+             <div className="flex items-center gap-2">
+               <Package className="w-5 h-5 text-gray-600" />
+               <h2 className="text-lg font-semibold text-gray-800">Order History</h2>
+             </div>
+                           <button
+                onClick={() => setShowOrderHistory(!showOrderHistory)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-all duration-200 active:scale-95"
+              >
+                <span>{showOrderHistory ? "Hide" : "Show"} Orders</span>
+                <span className="px-2 py-0.5 text-xs bg-gray-700 text-gray-200 rounded-full font-medium">
+                  {userOrders.length}
+                </span>
+              </button>
+           </div>
 
           {showOrderHistory && (
             <div className="space-y-4">

@@ -1,5 +1,5 @@
 import { db } from "./firebase";
-import { collection, doc, getDoc, getDocs, orderBy, query, where, limit as fsLimit } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, where, limit as fsLimit, updateDoc, increment } from "firebase/firestore";
 import { ProductType, ProductsType } from "@/types";
 import { fetchCategoriesWithSubcategories } from "./categories";
 
@@ -22,6 +22,7 @@ const mapDocToProduct = (snap: any): ProductType => {
     price: typeof data.price === "number" ? data.price : Number(data.price ?? 0),
     images: data.images ?? {},
     salesCount: typeof data.salesCount === "number" ? data.salesCount : 0,
+    stock: typeof data.stock === "number" ? data.stock : undefined,
   };
 };
 
@@ -102,6 +103,149 @@ export const fetchDistinctProductCategories = async (max: number = 200): Promise
     if (typeof cat === "string" && cat.trim().length > 0) set.add(cat);
   });
   return Array.from(set).sort((a, b) => a.localeCompare(b));
+};
+
+// Update product stock and sales count after order
+export const updateProductAfterOrder = async (productId: string, quantity: number) => {
+  try {
+    console.log(`Updating product ${productId} with quantity ${quantity}`);
+    const productRef = doc(db, PRODUCTS_COLLECTION, productId);
+    
+    // Get current product data to check if stock exists
+    const productSnap = await getDoc(productRef);
+    if (!productSnap.exists()) {
+      throw new Error(`Product with ID ${productId} not found`);
+    }
+    
+    const productData = productSnap.data();
+    console.log(`Current product data:`, { 
+      name: productData.name, 
+      currentStock: productData.stock, 
+      currentSalesCount: productData.salesCount 
+    });
+    
+    const updates: any = {
+      salesCount: increment(quantity), // Always increment sales count
+      updatedAt: new Date(),
+    };
+    
+    // Only update stock if it exists and is a number
+    if (typeof productData.stock === 'number') {
+      const newStock = productData.stock - quantity;
+      if (newStock < 0) {
+        throw new Error(`Insufficient stock for product ${productData.name}. Available: ${productData.stock}, Requested: ${quantity}`);
+      }
+      updates.stock = newStock;
+      console.log(`Stock updated: ${productData.stock} → ${newStock}`);
+    } else {
+      console.log(`No stock field found for product ${productData.name}, skipping stock update`);
+    }
+    
+    console.log(`Sales count updated: ${productData.salesCount || 0} → ${(productData.salesCount || 0) + quantity}`);
+    
+    await updateDoc(productRef, updates);
+    console.log(`Product ${productId} updated successfully`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating product ${productId} after order:`, error);
+    throw error;
+  }
+};
+
+// Batch update multiple products after order
+export const updateProductsAfterOrder = async (cartItems: Array<{ id: string; quantity: number }>) => {
+  try {
+    console.log(`Starting batch update for ${cartItems.length} products:`, cartItems);
+    
+    const updatePromises = cartItems.map(item => 
+      updateProductAfterOrder(item.id, item.quantity)
+    );
+    
+    await Promise.all(updatePromises);
+    console.log(`All ${cartItems.length} products updated successfully`);
+    return true;
+  } catch (error) {
+    console.error('Error updating products after order:', error);
+    throw error;
+  }
+};
+
+// Check if product has sufficient stock
+export const checkProductStock = async (productId: string, requestedQuantity: number): Promise<{ 
+  hasStock: boolean; 
+  availableStock?: number; 
+  error?: string; 
+}> => {
+  try {
+    const productRef = doc(db, PRODUCTS_COLLECTION, productId);
+    const productSnap = await getDoc(productRef);
+    
+    if (!productSnap.exists()) {
+      return { hasStock: false, error: "Product not found" };
+    }
+    
+    const productData = productSnap.data();
+    
+    // If no stock field, assume unlimited stock
+    if (productData.stock === undefined) {
+      return { hasStock: true };
+    }
+    
+    // Check if requested quantity is available
+    if (productData.stock >= requestedQuantity) {
+      return { hasStock: true, availableStock: productData.stock };
+    } else {
+      return { 
+        hasStock: false, 
+        availableStock: productData.stock, 
+        error: `Insufficient stock. Available: ${productData.stock}, Requested: ${requestedQuantity}` 
+      };
+    }
+  } catch (error) {
+    console.error(`Error checking stock for product ${productId}:`, error);
+    return { hasStock: false, error: "Error checking stock availability" };
+  }
+};
+
+// Batch check stock for multiple products
+export const checkProductsStock = async (cartItems: Array<{ id: string; quantity: number }>): Promise<{
+  allInStock: boolean;
+  stockIssues: Array<{ id: string; name: string; requested: number; available: number; error: string }>;
+}> => {
+  try {
+    const stockChecks = await Promise.all(
+      cartItems.map(async (item) => {
+        const stockCheck = await checkProductStock(item.id, item.quantity);
+        if (!stockCheck.hasStock) {
+          // Get product name for better error reporting
+          const productRef = doc(db, PRODUCTS_COLLECTION, item.id);
+          const productSnap = await getDoc(productRef);
+          const productName = productSnap.exists() ? productSnap.data().name : 'Unknown Product';
+          
+          return {
+            id: item.id,
+            name: productName,
+            requested: item.quantity,
+            available: stockCheck.availableStock || 0,
+            error: stockCheck.error || 'Insufficient stock'
+          };
+        }
+        return null;
+      })
+    );
+    
+    const stockIssues = stockChecks.filter(Boolean);
+    return {
+      allInStock: stockIssues.length === 0,
+      stockIssues: stockIssues as Array<{ id: string; name: string; requested: number; available: number; error: string }>
+    };
+  } catch (error) {
+    console.error('Error checking products stock:', error);
+    return {
+      allInStock: false,
+      stockIssues: [{ id: 'unknown', name: 'Unknown', requested: 0, available: 0, error: 'Error checking stock' }]
+    };
+  }
 };
 
 

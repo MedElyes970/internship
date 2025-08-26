@@ -7,10 +7,11 @@ import { ShippingFormInputs } from "@/types";
 import { ArrowRight, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc, increment, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { updateProductsAfterOrder, checkProductsStock } from "@/lib/products";
 
 const steps = [
   { id: 1, title: "Shopping Cart" },
@@ -31,6 +32,46 @@ const CartPage = () => {
 
   const isCartEmpty = cart.length === 0;
 
+  // Check for stock issues
+  const [stockIssues, setStockIssues] = useState<Array<{ id: string; name: string; requested: number; available: number; error: string }>>([]);
+  const [hasStockIssues, setHasStockIssues] = useState(false);
+
+  // Check stock availability when cart changes
+  useEffect(() => {
+    const validateStock = async () => {
+      if (cart.length === 0) {
+        setStockIssues([]);
+        setHasStockIssues(false);
+        return;
+      }
+
+      try {
+        const stockCheck = await checkProductsStock(cart.map(item => ({ id: item.id as string, quantity: item.quantity })));
+        setStockIssues(stockCheck.stockIssues);
+        setHasStockIssues(!stockCheck.allInStock);
+      } catch (error) {
+        console.error('Error checking stock:', error);
+        // Fallback to basic validation
+        const basicStockIssues = cart.filter(item => {
+          if (item.stock !== undefined && item.quantity > item.stock) {
+            return true;
+          }
+          return false;
+        });
+        setStockIssues(basicStockIssues.map(item => ({
+          id: item.id as string,
+          name: item.name,
+          requested: item.quantity,
+          available: item.stock || 0,
+          error: `Insufficient stock. Available: ${item.stock}, Requested: ${item.quantity}`
+        })));
+        setHasStockIssues(basicStockIssues.length > 0);
+      }
+    };
+
+    validateStock();
+  }, [cart]);
+
   const handleConfirmOrder = async () => {
     console.log("handleConfirmOrder called");
     if (!user || !shippingForm || cart.length === 0) {
@@ -38,8 +79,19 @@ const CartPage = () => {
       return;
     }
 
+    // Check for stock issues before proceeding
+    if (hasStockIssues) {
+      alert("Some items in your cart have insufficient stock. Please review your cart.");
+      return;
+    }
+
     try {
       console.log("Creating order...");
+      
+      // First, update product stock and sales count
+      console.log("Updating product stock and sales count...");
+      await updateProductsAfterOrder(cart.map(item => ({ id: item.id as string, quantity: item.quantity })));
+      console.log("Product updates completed successfully");
       
       // Get the next order number
       const counterRef = doc(db, "counters", "orders");
@@ -82,6 +134,8 @@ const CartPage = () => {
       router.push(`/order-success?orderId=${docRef.id}`, { scroll: false });
     } catch (error) {
       console.error("Error creating order:", error);
+      // Show user-friendly error message
+      alert(`Failed to create order: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
     }
   };
 
@@ -132,41 +186,64 @@ const CartPage = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                {cart.map((item) => (
-                  <div
-                    className="flex items-center justify-between"
-                    key={item.id}
-                  >
-                    <div className="flex gap-8">
-                      <div className="relative w-32 h-32 bg-gray-50 rounded-lg overflow-hidden">
-                        <Image
-                          src={Object.values(item.images)[0]}
-                          alt={item.name}
-                          fill
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="flex flex-col justify-between">
-                        <div className="flex flex-col gap-1">
-                          <p className="text-sm font-medium">{item.name}</p>
-                          <p className="text-xs text-gray-500">
-                            Quantity: {item.quantity}
+              <div className="flex flex-col gap-6">
+                {/* Stock Warning */}
+                {hasStockIssues && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <p className="text-red-800 font-medium text-sm">Stock Issues Detected</p>
+                    </div>
+                    <p className="text-red-700 text-sm mt-2">
+                      Some items in your cart have insufficient stock. Please review and adjust quantities.
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {stockIssues.map((item) => (
+                        <div key={item.id} className="text-red-700 text-sm">
+                          • {item.name}: Requested {item.requested}, Available {item.available}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Cart Items */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  {cart.map((item) => (
+                    <div
+                      className="flex items-center justify-between"
+                      key={item.id}
+                    >
+                      <div className="flex gap-8">
+                        <div className="relative w-32 h-32 bg-gray-50 rounded-lg overflow-hidden">
+                          <Image
+                            src={Object.values(item.images)[0]}
+                            alt={item.name}
+                            fill
+                            className="object-contain"
+                          />
+                        </div>
+                        <div className="flex flex-col justify-between">
+                          <div className="flex flex-col gap-1">
+                            <p className="text-sm font-medium">{item.name}</p>
+                            <p className="text-xs text-gray-500">
+                              Quantity: {item.quantity}
+                            </p>
+                          </div>
+                          <p className="font-medium">
+                            ${(item.price * item.quantity).toFixed(2)}
                           </p>
                         </div>
-                        <p className="font-medium">
-                          ${(item.price * item.quantity).toFixed(2)}
-                        </p>
                       </div>
+                      <button
+                        onClick={() => removeFromCart(item)}
+                        className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 transition-all duration-300 text-red-400 flex items-center justify-center cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => removeFromCart(item)}
-                      className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 transition-all duration-300 text-red-400 flex items-center justify-center cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )
           ) : activeStep === 2 ? (
@@ -223,14 +300,14 @@ const CartPage = () => {
                 onClick={() =>
                   !isCartEmpty && router.push("/cart?step=2", { scroll: false })
                 }
-                disabled={isCartEmpty}
+                disabled={isCartEmpty || hasStockIssues}
                 className={`w-full transition-all duration-300 text-white p-2 rounded-lg flex items-center justify-center gap-2 ${
-                  isCartEmpty
+                  isCartEmpty || hasStockIssues
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-gray-800 hover:bg-gray-900 cursor-pointer"
                 }`}
               >
-                Continue
+                {hasStockIssues ? "Resolve Stock Issues" : "Continue"}
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>

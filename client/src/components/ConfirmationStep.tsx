@@ -3,6 +3,7 @@
 import { ShippingFormInputs, CartItemsType } from "@/types";
 import Image from "next/image";
 import { ArrowLeft, Check, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type Props = {
   shippingForm: ShippingFormInputs;
@@ -19,13 +20,47 @@ const ConfirmationStep = ({
   onBack,
   onConfirm,
 }: Props) => {
+  const [hasStockIssues, setHasStockIssues] = useState(false);
+
+  useEffect(() => {
+    // Check for stock issues
+    const stockIssues = cart.filter(item => {
+      if (item.stock !== undefined && item.quantity > item.stock) {
+        return true;
+      }
+      return false;
+    });
+    setHasStockIssues(stockIssues.length > 0);
+  }, [cart]);
+
   const subtotal = cart.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
   );
 
+  const handleConfirm = () => {
+    if (hasStockIssues) {
+      alert("Some items in your cart have insufficient stock. Please return to cart and resolve these issues.");
+      return;
+    }
+    onConfirm();
+  };
+
   return (
     <div className="flex flex-col gap-8">
+      {/* Stock Warning */}
+      {hasStockIssues && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <p className="text-red-800 font-medium text-sm">Stock Issues Detected</p>
+          </div>
+          <p className="text-red-700 text-sm mt-2">
+            Some items in your cart have insufficient stock. Please return to cart and resolve these issues.
+          </p>
+        </div>
+      )}
+      
       {/* SHIPPING INFO */}
       <div className="flex flex-col gap-3">
         <h3 className="text-lg font-semibold">Shipping Information</h3>
@@ -119,11 +154,16 @@ const ConfirmationStep = ({
 
         <button
           type="button"
-          onClick={onConfirm}
-          className="flex-1 bg-gray-800 hover:bg-gray-900 transition-all duration-300 text-white p-2 rounded-lg cursor-pointer flex items-center justify-center gap-2"
+          onClick={handleConfirm}
+          disabled={hasStockIssues}
+          className={`flex-1 transition-all duration-300 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-2 ${
+            hasStockIssues
+              ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+              : "bg-gray-800 hover:bg-gray-900 text-white"
+          }`}
         >
           <Check className="w-3 h-3" />
-          Confirm
+          {hasStockIssues ? "Resolve Stock Issues" : "Confirm"}
         </button>
       </div>
     </div>

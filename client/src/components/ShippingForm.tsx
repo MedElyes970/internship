@@ -1,6 +1,6 @@
 "use client";
 
-import { ShippingFormInputs, shippingFormSchema } from "@/types";
+import { ShippingFormInputs, shippingFormSchema, CartItemsType } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import useCartStore from "@/stores/cartStore";
 
 interface Props {
   setShippingForm: (data: ShippingFormInputs) => void;
@@ -17,6 +18,17 @@ interface Props {
 const ShippingForm = ({ setShippingForm }: Props) => {
   const { user } = useAuth();
   const router = useRouter();
+  const { cart } = useCartStore();
+
+  // Check for stock issues
+  const stockIssues = cart.filter(item => {
+    if (item.stock !== undefined && item.quantity > item.stock) {
+      return true;
+    }
+    return false;
+  });
+
+  const hasStockIssues = stockIssues.length > 0;
 
   const {
     register,
@@ -45,15 +57,36 @@ const ShippingForm = ({ setShippingForm }: Props) => {
   }, [user, reset]);
 
   const handleShippingForm: SubmitHandler<ShippingFormInputs> = (data) => {
+    // Check for stock issues before proceeding
+    if (hasStockIssues) {
+      alert("Some items in your cart have insufficient stock. Please return to cart and resolve these issues.");
+      router.push("/cart?step=1", { scroll: false });
+      return;
+    }
+    
     setShippingForm(data);
     router.push("/cart?step=3", { scroll: false });
   };
 
   return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={handleSubmit(handleShippingForm)}
-    >
+    <div className="flex flex-col gap-4">
+      {/* Stock Warning */}
+      {hasStockIssues && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <p className="text-red-800 font-medium text-sm">Stock Issues Detected</p>
+          </div>
+          <p className="text-red-700 text-sm mt-2">
+            Some items in your cart have insufficient stock. Please return to cart and resolve these issues.
+          </p>
+        </div>
+      )}
+      
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={handleSubmit(handleShippingForm)}
+      >
       {[
         { id: "name", label: "Name", type: "text" },
         { id: "email", label: "Email", type: "email" },
@@ -109,6 +142,7 @@ const ShippingForm = ({ setShippingForm }: Props) => {
         </button>
       </div>
     </form>
+    </div>
   );
 };
 

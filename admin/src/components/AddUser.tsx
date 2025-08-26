@@ -19,53 +19,55 @@ import {
   FormMessage,
 } from "./ui/form";
 import { Input } from "./ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "./ui/button";
+import { promoteUserToAdminByEmail, getAdmins, AdminUserListItem, downgradeAdminById } from "@/lib/users";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 
 const formSchema = z.object({
-  fullName: z
-    .string()
-    .min(2, { message: "Full name must be at least 2 characters!" })
-    .max(50),
   email: z.string().email({ message: "Invalid email address!" }),
-  phone: z.string().min(10).max(15),
-  address: z.string().min(2),
-  city: z.string().min(2),
 });
 
 const AddUser = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: { email: "" },
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [admins, setAdmins] = useState<AdminUserListItem[]>([]);
+
+  useEffect(() => {
+    const loadAdmins = async () => {
+      const list = await getAdmins();
+      setAdmins(list);
+    };
+    loadAdmins();
+  }, []);
   return (
     <SheetContent>
       <SheetHeader>
-        <SheetTitle className="mb-4">Add User</SheetTitle>
+        <SheetTitle className="mb-4">Add Admin</SheetTitle>
         <SheetDescription asChild>
           <Form {...form}>
-            <form className="space-y-8">
-              <FormField
-                control={form.control}
-                name="fullName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Enter user full name.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <form className="space-y-8" onSubmit={form.handleSubmit(async (values) => {
+              setSubmitting(true);
+              setResult(null);
+              try {
+                const promoted = await promoteUserToAdminByEmail(values.email);
+                if (promoted) {
+                  setResult("User promoted to admin.");
+                  const list = await getAdmins();
+                  setAdmins(list);
+                } else {
+                  setResult("No user found with that email.");
+                }
+              } catch (e: any) {
+                setResult(e?.message || "Failed to promote user.");
+              } finally {
+                setSubmitting(false);
+              }
+            })}>
               <FormField
                 control={form.control}
                 name="email"
@@ -73,69 +75,67 @@ const AddUser = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="user@example.com" />
                     </FormControl>
-                    <FormDescription>
-                      Only admin can see your email.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Only admin can see your phone number (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Enter user address (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Enter user city (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit">Submit</Button>
+              {result && <div className="text-sm text-muted-foreground">{result}</div>}
+              <Button type="submit" disabled={submitting}>{submitting ? 'Promoting...' : 'Promote to Admin'}</Button>
             </form>
           </Form>
         </SheetDescription>
       </SheetHeader>
+      {/* Admins List */}
+      <div className="mt-6">
+        <h3 className="text-sm font-medium mb-3">Current Admins</h3>
+        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-2">
+          {admins.length === 0 ? (
+            <div className="text-sm text-muted-foreground">No admins found.</div>
+          ) : (
+            admins.map((a) => (
+              <div key={a.id} className="flex items-center gap-3">
+                <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-200">
+                  <Image src={a.avatar || "/users/1.png"} alt={a.fullName || a.email || a.id} fill className="object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm truncate">{a.fullName || a.email || a.id}</div>
+                  <div className="text-xs text-muted-foreground truncate">{a.email}</div>
+                </div>
+                <DowngradeButton adminId={a.id} email={a.email || ''} refresh={async () => setAdmins(await getAdmins())} />
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </SheetContent>
+  );
+};
+
+const DowngradeButton = ({ adminId, email, refresh }: { adminId: string; email: string; refresh: () => Promise<void>; }) => {
+  const { user } = require("@/contexts/AdminAuthContext").useAdminAuth();
+  const isSelf = user?.email && email && user.email.toLowerCase() === email.toLowerCase();
+  const [loading, setLoading] = useState(false);
+  if (isSelf) {
+    return <button className="text-xs text-muted-foreground" disabled>It’s you</button>;
+  }
+  return (
+    <button
+      className="text-xs px-2 py-1 rounded-md border hover:bg-secondary disabled:opacity-50"
+      disabled={loading}
+      onClick={async () => {
+        try {
+          setLoading(true);
+          await downgradeAdminById(adminId);
+          await refresh();
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      {loading ? 'Downgrading...' : 'Downgrade'}
+    </button>
   );
 };
 

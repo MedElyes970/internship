@@ -255,8 +255,7 @@ export async function POST(request: NextRequest) {
     // Price - try multiple common selectors
     let priceSelectors = [
       '.price', '.product-price', '.current-price', '.regular-price', '.sale-price',
-      '[data-price]', '.price-value', '.product-price-value', '.price-current',
-      '.product-price .price', '.price-wrapper .price', '.price-container .price'
+      '[data-price]', '.price-value', '.product-price-value'
     ];
 
     // Website-specific price selectors
@@ -284,52 +283,43 @@ export async function POST(request: NextRequest) {
     }
     
     if (priceText) {
-      console.log(`Raw price text: "${priceText}"`);
+      console.log(`Processing price text: "${priceText}"`);
       
-      // Handle different price formats
-      let cleanPrice = '';
+      // Extract numeric price from text (handle various formats)
+      let priceMatch = priceText.match(/[\d\s,]+\.?\d*/);
+      console.log(`First price match: "${priceMatch ? priceMatch[0] : 'none'}"`);
       
-      // Remove currency symbols and extra text (including DT, د.ت, etc.)
-      const priceWithoutCurrency = priceText.replace(/[^\d\s,\.]/g, '').trim();
-      console.log(`Price without currency: "${priceWithoutCurrency}"`);
-      
-      // Extract the numeric part - try multiple patterns
-      let priceMatch = priceWithoutCurrency.match(/[\d\s,]+\.?\d*/);
-      
-      // If no match, try alternative patterns
+      // If no match, try alternative patterns for Tunisian Dinar format
       if (!priceMatch) {
         // Try to find price in format like "49,000 DT" or "99.99 DT"
-        priceMatch = priceWithoutCurrency.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/);
+        priceMatch = priceText.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/);
+        console.log(`Second price match: "${priceMatch ? priceMatch[0] : 'none'}"`);
       }
       
       // If still no match, try to find any sequence of digits with commas
       if (!priceMatch) {
-        priceMatch = priceWithoutCurrency.match(/(\d+(?:,\d+)*)/);
+        priceMatch = priceText.match(/(\d+(?:,\d+)*)/);
+        console.log(`Third price match: "${priceMatch ? priceMatch[0] : 'none'}"`);
       }
       
       if (priceMatch) {
-        cleanPrice = priceMatch[0].replace(/[\s,]/g, '');
-        console.log(`Cleaned price: "${cleanPrice}"`);
-        
-        // Parse the price
+        const cleanPrice = priceMatch[0].replace(/[\s,]/g, '');
         scrapedData.price = parseFloat(cleanPrice);
-        console.log(`Parsed price: ${scrapedData.price}`);
+        console.log(`Extracted price: ${scrapedData.price}`);
         
-        // Also store the formatted price for display
+        // Store the original formatted price text for display
+        scrapedData.originalPriceText = priceText.trim();
+        
+        // Also store a properly formatted version with commas
         if (!isNaN(scrapedData.price)) {
-          // Format with thousands separators
           scrapedData.formattedPrice = new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 2
           }).format(scrapedData.price);
           console.log(`Formatted price: ${scrapedData.formattedPrice}`);
-          
-          // Also log the original vs processed for debugging
-          console.log(`Price processing: "${priceText}" → "${priceWithoutCurrency}" → "${cleanPrice}" → ${scrapedData.price} → "${scrapedData.formattedPrice}"`);
         }
       } else {
         console.log('No price pattern matched');
-        console.log(`Failed to extract price from: "${priceText}"`);
       }
     }
 

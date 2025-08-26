@@ -83,6 +83,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [rivalUrl, setRivalUrl] = useState("");
   const [isScraping, setIsScraping] = useState(false);
+  const [formattedPrice, setFormattedPrice] = useState<string>("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -100,6 +101,17 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       reference: undefined,
     },
   });
+
+  // Initialize formatted price when form loads
+  useEffect(() => {
+    if (form.getValues("price") > 0) {
+      const formatted = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format(form.getValues("price"));
+      setFormattedPrice(formatted);
+    }
+  }, [form]);
 
   // Prefill reference with the next auto-assigned number so admin can see/change it
   useEffect(() => {
@@ -225,6 +237,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       form.reset();
       setImageUrls([]);
       setSpecs({});
+      setFormattedPrice("");
 
       // Call success callback if provided
       if (onSuccess) {
@@ -379,10 +392,22 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
         form.setValue('description', scrapedData.description);
       }
       if (scrapedData.price) {
+        // Set the numeric price value for the form
         form.setValue('price', scrapedData.price);
-        // If we have a formatted price, show it in a toast for confirmation
+        
+        // Set the formatted price for display
         if (scrapedData.formattedPrice) {
-          toast.info(`Price extracted: ${scrapedData.formattedPrice}`);
+          setFormattedPrice(scrapedData.formattedPrice);
+        } else if (scrapedData.originalPriceText) {
+          // If no formatted price, use the original text
+          setFormattedPrice(scrapedData.originalPriceText);
+        } else {
+          // Fallback: format the numeric price
+          const formatted = new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+          }).format(scrapedData.price);
+          setFormattedPrice(formatted);
         }
       }
       if (scrapedData.brand) {
@@ -553,28 +578,32 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       <FormItem>
                         <FormLabel>Price *</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0.01"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(parseFloat(e.target.value) || 0)
-                              }
-                              placeholder="0.00"
-                              disabled={isSubmitting}
-                              className="pr-20"
-                            />
-                            {field.value > 0 && (
-                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
-                                {new Intl.NumberFormat('en-US', {
+                          <Input
+                            type="text"
+                            {...field}
+                            value={formattedPrice || field.value || ""}
+                            onChange={(e) => {
+                              // Remove non-numeric characters except decimal point
+                              const cleanValue = e.target.value.replace(/[^\d.]/g, '');
+                              const numericValue = parseFloat(cleanValue) || 0;
+                              field.onChange(numericValue);
+                              setFormattedPrice(cleanValue);
+                            }}
+                            onBlur={(e) => {
+                              // Format the price when leaving the field
+                              const numericValue = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
+                              if (numericValue > 0) {
+                                const formatted = new Intl.NumberFormat('en-US', {
                                   minimumFractionDigits: 0,
                                   maximumFractionDigits: 2
-                                }).format(field.value)}
-                              </div>
-                            )}
-                          </div>
+                                }).format(numericValue);
+                                setFormattedPrice(formatted);
+                                field.onChange(numericValue);
+                              }
+                            }}
+                            placeholder="0.00"
+                            disabled={isSubmitting}
+                          />
                         </FormControl>
                         <FormDescription>
                           Enter the price of the product.
@@ -975,6 +1004,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       setImageUrls([]);
                       setSpecs({});
                       setSubmitStatus("idle");
+                      setFormattedPrice("");
                     }}
                   >
                     Reset

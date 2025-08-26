@@ -3,7 +3,7 @@
 import ShippingForm from "@/components/ShippingForm";
 import ConfirmationStep from "@/components/ConfirmationStep";
 import useCartStore from "@/stores/cartStore";
-import { ShippingFormInputs, CartItemsType } from "@/types";
+import { ShippingFormInputs } from "@/types";
 import { ArrowRight, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -154,56 +154,56 @@ const CartPage = () => {
           )}
         </div>
 
-        {/* SIDEBAR */}
-        <div className="w-full shadow-lg border-1 border-gray-100 p-8 rounded-lg flex flex-col gap-8 h-max">
-          <h2 className="font-semibold">Cart Details</h2>
-          <div className="flex flex-col gap-4">
-            <div className="flex justify-between text-sm">
-              <p className="text-gray-500">Subtotal</p>
-              <p className="font-medium">
-                $
-                {cart
-                  .reduce((acc, item) => acc + item.price * item.quantity, 0)
-                  .toFixed(2)}
-              </p>
-            </div>
-            <div className="flex justify-between text-sm">
-              <p className="text-gray-500">Discount 10%</p>
-              <p className="font-medium">$0.00</p>
-            </div>
-            <div className="flex justify-between text-sm">
-              <p className="text-gray-500">Shipping Fee</p>
-              <p className="font-medium">$0.00</p>
-            </div>
-            <hr className="border-gray-200" />
-            <div className="flex justify-between">
-              <p className="text-gray-800 font-semibold">Total</p>
-              <p className="font-medium">
-                $
-                {cart
-                  .reduce((acc, item) => acc + item.price * item.quantity, 0)
-                  .toFixed(2)}
-              </p>
+        {/* SIDEBAR: ONLY SHOW ON STEP 1 */}
+        {activeStep === 1 && (
+          <div className="w-full shadow-lg border-1 border-gray-100 p-8 rounded-lg flex flex-col gap-8 h-max">
+            <h2 className="font-semibold">Cart Details</h2>
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between text-sm">
+                <p className="text-gray-500">Subtotal</p>
+                <p className="font-medium">
+                  $
+                  {cart
+                    .reduce((acc, item) => acc + item.price * item.quantity, 0)
+                    .toFixed(2)}
+                </p>
+              </div>
+              <div className="flex justify-between text-sm">
+                <p className="text-gray-500">Discount 10%</p>
+                <p className="font-medium">$0.00</p>
+              </div>
+              <div className="flex justify-between text-sm">
+                <p className="text-gray-500">Shipping Fee</p>
+                <p className="font-medium">$0.00</p>
+              </div>
+              <hr className="border-gray-200" />
+              <div className="flex justify-between">
+                <p className="text-gray-800 font-semibold">Total</p>
+                <p className="font-medium">
+                  $
+                  {cart
+                    .reduce((acc, item) => acc + item.price * item.quantity, 0)
+                    .toFixed(2)}
+                </p>
+              </div>
+
+              <button
+                onClick={() =>
+                  !isCartEmpty && router.push("/cart?step=2", { scroll: false })
+                }
+                disabled={isCartEmpty}
+                className={`w-full transition-all duration-300 text-white p-2 rounded-lg flex items-center justify-center gap-2 ${
+                  isCartEmpty
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-gray-800 hover:bg-gray-900 cursor-pointer"
+                }`}
+              >
+                Continue
+                <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
           </div>
-
-          {activeStep === 1 && (
-            <button
-              onClick={() =>
-                !isCartEmpty && router.push("/cart?step=2", { scroll: false })
-              }
-              disabled={isCartEmpty}
-              className={`w-full transition-all duration-300 text-white p-2 rounded-lg flex items-center justify-center gap-2 ${
-                isCartEmpty
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gray-800 hover:bg-gray-900 cursor-pointer"
-              }`}
-            >
-              Continue
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

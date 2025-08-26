@@ -29,13 +29,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { addSubcategory, generateSlug, isSubcategorySlugUnique, getCategories, Category } from "@/lib/categories";
+import {
+  addSubcategory,
+  generateSlug,
+  isSubcategorySlugUnique,
+  getCategories,
+  Category,
+} from "@/lib/categories";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 const formSchema = z.object({
   categoryId: z.string().min(1, { message: "Please select a category!" }),
-  name: z.string().min(1, { message: "Name is required!" }).max(50, { message: "Name must be less than 50 characters" }),
+  name: z
+    .string()
+    .min(1, { message: "Name is required!" })
+    .max(50, { message: "Name must be less than 50 characters" }),
   description: z.string().optional(),
 });
 
@@ -47,7 +56,9 @@ interface AddSubcategoryProps {
 
 const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitStatus, setSubmitStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
   const [categories, setCategories] = useState<Category[]>([]);
 
   const form = useForm<FormData>({
@@ -75,25 +86,29 @@ const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
-    setSubmitStatus('idle');
+    setSubmitStatus("idle");
 
     try {
       // Get the selected category
-      const selectedCategory = categories.find(cat => cat.id === data.categoryId);
+      const selectedCategory = categories.find(
+        (cat) => cat.id === data.categoryId
+      );
       if (!selectedCategory) {
         toast.error("Selected category not found!");
-        setSubmitStatus('error');
+        setSubmitStatus("error");
         return;
       }
 
       // Generate slug from name
       const slug = generateSlug(data.name);
-      
+
       // Check if slug is unique within the category
       const isUnique = await isSubcategorySlugUnique(slug, data.categoryId);
       if (!isUnique) {
-        toast.error("A subcategory with this name already exists in this category!");
-        setSubmitStatus('error');
+        toast.error(
+          "A subcategory with this name already exists in this category!"
+        );
+        setSubmitStatus("error");
         return;
       }
 
@@ -107,9 +122,13 @@ const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
       });
 
       toast.success("Subcategory added successfully!");
-      setSubmitStatus('success');
-      form.reset();
-      
+      setSubmitStatus("success");
+      form.reset({
+        categoryId: form.getValues("categoryId"), // keep selected parent category
+        name: "",
+        description: "",
+      });
+
       // Call success callback if provided
       if (onSuccess) {
         onSuccess();
@@ -117,13 +136,12 @@ const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
 
       // Reset status after a delay
       setTimeout(() => {
-        setSubmitStatus('idle');
+        setSubmitStatus("idle");
       }, 2000);
-
     } catch (error) {
-      console.error('Error adding subcategory:', error);
+      console.error("Error adding subcategory:", error);
       toast.error("Failed to add subcategory. Please try again.");
-      setSubmitStatus('error');
+      setSubmitStatus("error");
     } finally {
       setIsSubmitting(false);
     }
@@ -139,7 +157,7 @@ const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
       );
     }
 
-    if (submitStatus === 'success') {
+    if (submitStatus === "success") {
       return (
         <>
           <CheckCircle className="mr-2 h-4 w-4" />
@@ -148,7 +166,7 @@ const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
       );
     }
 
-    if (submitStatus === 'error') {
+    if (submitStatus === "error") {
       return (
         <>
           <AlertCircle className="mr-2 h-4 w-4" />
@@ -161,9 +179,9 @@ const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
   };
 
   const getSubmitButtonVariant = () => {
-    if (submitStatus === 'success') return 'default';
-    if (submitStatus === 'error') return 'destructive';
-    return 'default';
+    if (submitStatus === "success") return "default";
+    if (submitStatus === "error") return "destructive";
+    return "default";
   };
 
   return (
@@ -208,14 +226,15 @@ const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
                   <FormItem>
                     <FormLabel>Subcategory Name</FormLabel>
                     <FormControl>
-                      <Input 
-                        {...field} 
+                      <Input
+                        {...field}
                         placeholder="Enter subcategory name"
                         disabled={isSubmitting}
                       />
                     </FormControl>
                     <FormDescription>
-                      Enter a unique name for the subcategory. A URL-friendly slug will be generated automatically.
+                      Enter a unique name for the subcategory. A URL-friendly
+                      slug will be generated automatically.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -229,15 +248,16 @@ const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
                   <FormItem>
                     <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        {...field} 
+                      <Textarea
+                        {...field}
                         placeholder="Enter subcategory description"
                         rows={3}
                         disabled={isSubmitting}
                       />
                     </FormControl>
                     <FormDescription>
-                      Provide a brief description of what this subcategory contains.
+                      Provide a brief description of what this subcategory
+                      contains.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -245,22 +265,22 @@ const AddSubcategory = ({ onSuccess }: AddSubcategoryProps) => {
               />
 
               <div className="flex gap-3 pt-4">
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={isSubmitting}
                   variant={getSubmitButtonVariant()}
                   className="flex-1"
                 >
                   {getSubmitButtonContent()}
                 </Button>
-                
-                <Button 
-                  type="button" 
+
+                <Button
+                  type="button"
                   variant="outline"
                   disabled={isSubmitting}
                   onClick={() => {
                     form.reset();
-                    setSubmitStatus('idle');
+                    setSubmitStatus("idle");
                   }}
                 >
                   Reset

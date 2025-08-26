@@ -269,6 +269,69 @@ export const searchProducts = async (searchTerm: string): Promise<Product[]> => 
   }
 };
 
+// Get popular products by sales count
+export const getPopularProducts = async (limit: number = 5): Promise<Product[]> => {
+  try {
+    console.log('Fetching popular products...');
+    
+    // Use a single orderBy to avoid composite index issues
+    const q = query(
+      collection(db, COLLECTION_NAME), 
+      orderBy('salesCount', 'desc')
+    );
+    
+    console.log('Query created, executing...');
+    const querySnapshot = await getDocs(q);
+    console.log(`Query returned ${querySnapshot.docs.length} documents`);
+    
+    const products = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Product[];
+    
+    console.log('Products mapped:', products.map(p => ({ id: p.id, name: p.name, salesCount: p.salesCount })));
+    
+    // Filter out products with no sales, sort by sales count, then by creation date
+    const popularProducts = products
+      .filter(product => (product.salesCount || 0) > 0)
+      .sort((a, b) => {
+        // Primary sort by sales count (descending)
+        const salesDiff = (b.salesCount || 0) - (a.salesCount || 0);
+        if (salesDiff !== 0) return salesDiff;
+        
+        // Secondary sort by creation date (descending) for products with same sales count
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      })
+      .slice(0, limit);
+    
+    console.log(`Filtered to ${popularProducts.length} products with sales > 0`);
+    console.log('Final popular products:', popularProducts.map(p => ({ id: p.id, name: p.name, salesCount: p.salesCount })));
+    
+    return popularProducts;
+  } catch (error) {
+    console.error('Error getting popular products with orderBy:', error);
+    
+    // Fallback: fetch all products and sort in JavaScript
+    try {
+      console.log('Falling back to fetching all products...');
+      const allProducts = await getProducts();
+      
+      const popularProducts = allProducts
+        .filter(product => (product.salesCount || 0) > 0)
+        .sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0))
+        .slice(0, limit);
+      
+      console.log(`Fallback returned ${popularProducts.length} products`);
+      return popularProducts;
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError);
+      throw new Error(`Failed to get popular products: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+};
+
 // Get stock status color
 export const getStockStatusColor = (status: string | undefined) => {
   switch (status) {

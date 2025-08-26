@@ -4,55 +4,27 @@ import Image from "next/image";
 import { Card, CardContent, CardFooter, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { useEffect, useState } from "react";
-import { getPopularProducts, Product } from "@/lib/products";
-
-const latestTransactions = [
-  {
-    id: 1,
-    title: "Order Payment",
-    badge: "John Doe",
-    image:
-      "https://images.pexels.com/photos/91227/pexels-photo-91227.jpeg?auto=compress&cs=tinysrgb&w=800",
-    count: 1400,
-  },
-  {
-    id: 2,
-    title: "Order Payment",
-    badge: "Jane Smith",
-    image:
-      "https://images.pexels.com/photos/4969918/pexels-photo-4969918.jpeg?auto=compress&cs=tinysrgb&w=800",
-    count: 2100,
-  },
-  {
-    id: 3,
-    title: "Order Payment",
-    badge: "Michael Johnson",
-    image:
-      "https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=800",
-    count: 1300,
-  },
-  {
-    id: 4,
-    title: "Order Payment",
-    badge: "Lily Adams",
-    image:
-      "https://images.pexels.com/photos/712513/pexels-photo-712513.jpeg?auto=compress&cs=tinysrgb&w=800",
-    count: 2500,
-  },
-  {
-    id: 5,
-    title: "Order Payment",
-    badge: "Sam Brown",
-    image:
-      "https://images.pexels.com/photos/1680175/pexels-photo-1680175.jpeg?auto=compress&cs=tinysrgb&w=800",
-    count: 1400,
-  },
-];
+import { getPopularProducts, getLatestOrders, Product } from "@/lib/products";
+import OrderDetailsModal from "./OrderDetailsModal";
 
 const CardList = ({ title }: { title: string }) => {
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
+  const [latestOrders, setLatestOrders] = useState<Array<{
+    id: string;
+    orderNumber: number;
+    userId: string;
+    total: number;
+    status: string;
+    createdAt: any;
+    customerName?: string;
+    customerEmail?: string;
+    items?: any[];
+    shippingInfo?: any;
+  }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (title === "Popular Products") {
@@ -84,8 +56,74 @@ const CardList = ({ title }: { title: string }) => {
       };
 
       fetchPopularProducts();
+    } else if (title === "Latest Orders") {
+      fetchLatestOrders();
     }
   }, [title]);
+
+  // Helper function to get status badge variant
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+      case 'success':
+        return 'default';
+      case 'pending':
+        return 'secondary';
+      case 'cancelled':
+      case 'failed':
+        return 'destructive';
+      default:
+        return 'secondary';
+    }
+  };
+
+  // Helper function to format order date
+  const formatOrderDate = (timestamp: any) => {
+    if (!timestamp) return 'Unknown Date';
+    
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  const handleOrderClick = (order: any) => {
+    setSelectedOrder(order);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedOrder(null);
+    
+    // Refresh the orders list if we were showing orders
+    if (title === "Latest Orders") {
+      fetchLatestOrders();
+    }
+  };
+
+  const fetchLatestOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('CardList: Starting to fetch latest orders...');
+      const orders = await getLatestOrders(5);
+      console.log('CardList: Received latest orders:', orders);
+      setLatestOrders(orders);
+    } catch (error) {
+      console.error('CardList: Error fetching latest orders:', error);
+      setError(`Failed to load latest orders: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="">
@@ -150,30 +188,70 @@ const CardList = ({ title }: { title: string }) => {
             </div>
           )
         ) : (
-          latestTransactions.map((item) => (
-            <Card
-              key={item.id}
-              className="flex-row items-center justify-between gap-4 p-4"
-            >
-              <div className="w-12 h-12 rounded-sm relative overflow-hidden">
-                <Image
-                  src={item.image}
-                  alt={item.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <CardContent className="flex-1 p-0">
-                <CardTitle className="text-sm font-medium">
-                  {item.title}
-                </CardTitle>
-                <Badge variant="secondary">{item.badge}</Badge>
-              </CardContent>
-              <CardFooter className="p-0">${item.count /1000}K</CardFooter>
-            </Card>
-          ))
+          // Latest Orders
+          loading ? (
+            // Loading skeleton for orders
+            Array.from({ length: 5 }).map((_, index) => (
+              <Card
+                key={index}
+                className="flex-row items-center justify-between gap-4 p-4"
+              >
+                <div className="w-12 h-12 rounded-sm bg-gray-200 animate-pulse"></div>
+                <CardContent className="flex-1 p-0">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-24 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
+                </CardContent>
+                <CardFooter className="p-0">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-12"></div>
+                </CardFooter>
+              </Card>
+            ))
+          ) : latestOrders.length > 0 ? (
+            latestOrders.map((order) => (
+              <Card
+                key={order.id}
+                className="flex-row items-center justify-between gap-4 p-4 cursor-pointer"
+                onClick={() => handleOrderClick(order)}
+              >
+                <div className="w-12 h-12 rounded-sm relative overflow-hidden bg-blue-100 flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer">
+                  <span className="text-blue-600 text-xs font-medium">#{order.orderNumber}</span>
+                </div>
+                <CardContent className="flex-1 p-0">
+                  <CardTitle className="text-sm font-medium">
+                    Order #{order.orderNumber}
+                  </CardTitle>
+                  <Badge variant={getStatusBadgeVariant(order.status)} className="text-xs mt-1">
+                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  </Badge>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {order.customerName} • {formatOrderDate(order.createdAt)}
+                  </div>
+                </CardContent>
+                <CardFooter className="p-0">
+                  <span className="text-sm font-medium">${order.total.toFixed(2)}</span>
+                </CardFooter>
+              </Card>
+            ))
+          ) : error ? (
+            // Error state for orders
+            <div className="text-center text-red-500 py-4">
+              {error}
+            </div>
+          ) : (
+            // No orders found
+            <div className="text-center text-gray-500 py-4">
+              <div className="text-sm">No orders yet</div>
+              <div className="text-xs mt-1">Orders will appear here once customers start shopping</div>
+            </div>
+          )
         )}
       </div>
+      <OrderDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        order={selectedOrder}
+        onStatusUpdate={fetchLatestOrders}
+      />
     </div>
   );
 };

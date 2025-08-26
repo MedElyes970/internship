@@ -359,3 +359,84 @@ export const getStockStatusText = (status: string | undefined) => {
       return 'Unknown';
   }
 };
+
+// Get latest orders
+export const getLatestOrders = async (limit: number = 5): Promise<Array<{
+  id: string;
+  orderNumber: number;
+  userId: string;
+  total: number;
+  status: string;
+  createdAt: any;
+  customerName?: string;
+  customerEmail?: string;
+  items?: any[];
+  shippingInfo?: any;
+}>> => {
+  try {
+    console.log('Fetching latest orders...');
+    
+    const q = query(
+      collection(db, 'orders'), 
+      orderBy('createdAt', 'desc')
+    );
+    
+    console.log('Orders query created, executing...');
+    const querySnapshot = await getDocs(q);
+    console.log(`Orders query returned ${querySnapshot.docs.length} documents`);
+    
+    const orders = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        orderNumber: data.orderNumber || 0,
+        userId: data.userId || '',
+        total: data.total || 0,
+        status: data.status || 'pending',
+        createdAt: data.createdAt,
+        customerName: data.shippingInfo?.name || 'Unknown Customer',
+        customerEmail: data.shippingInfo?.email || 'No Email',
+        items: data.items || [],
+        shippingInfo: data.shippingInfo || {}
+      };
+    });
+    
+    console.log('Orders mapped:', orders.map(o => ({ 
+      id: o.id, 
+      orderNumber: o.orderNumber, 
+      customerName: o.customerName,
+      total: o.total,
+      itemsCount: o.items?.length || 0
+    })));
+    
+    // Return the latest orders up to the limit
+    const latestOrders = orders.slice(0, limit);
+    console.log(`Returning ${latestOrders.length} latest orders`);
+    
+    return latestOrders;
+  } catch (error) {
+    console.error('Error getting latest orders:', error);
+    throw new Error(`Failed to get latest orders: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+// Update order status
+export const updateOrderStatus = async (orderId: string, newStatus: string): Promise<boolean> => {
+  try {
+    console.log(`Updating order ${orderId} status to ${newStatus}`);
+    
+    const orderRef = doc(db, 'orders', orderId);
+    
+    // Update the order status
+    await updateDoc(orderRef, {
+      status: newStatus,
+      updatedAt: serverTimestamp(),
+    });
+    
+    console.log(`Order ${orderId} status updated successfully to ${newStatus}`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating order ${orderId} status:`, error);
+    throw new Error(`Failed to update order status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};

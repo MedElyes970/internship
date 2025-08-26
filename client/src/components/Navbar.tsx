@@ -4,7 +4,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import SearchBar from "./SearchBar";
-import { Bell, Home, ShoppingCart, User, LogOut } from "lucide-react";
+import { Bell, Home, ShoppingCart, User, LogOut, Package } from "lucide-react";
 import ShoppingCartIcon from "./ShoppingCartIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useRef, useEffect } from "react";
@@ -111,12 +111,12 @@ const Navbar = () => {
                   Profile
                 </Link>
                 <Link
-                  href="/orders"
+                  href="/profile?showOrders=true"
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   onClick={() => setShowDropdown(false)}
                 >
-                  <ShoppingCart className="w-4 h-4" />
-                  Orders
+                  <Package className="w-4 h-4" />
+                  Order History
                 </Link>
                 <button
                   onClick={handleLogout}

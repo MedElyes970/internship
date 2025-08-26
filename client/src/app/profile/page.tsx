@@ -10,6 +10,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { fetchUserOrders, UserOrder } from "@/lib/userOrders";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import {
   User,
@@ -18,14 +19,19 @@ import {
   LogOut,
   Trash2,
   AlertTriangle,
+  Package,
+  Clock,
+  DollarSign,
 } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 const ProfilePage = () => {
   const { user, logout, resetPassword } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [loading, setLoading] = useState(false);
@@ -72,6 +78,12 @@ const ProfilePage = () => {
   const [showDeleteButton, setShowDeleteButton] = useState(false);
   const [currentUser, setCurrentUser] = useState(user);
   const [deleteError, setDeleteError] = useState("");
+  const [userOrders, setUserOrders] = useState<UserOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [showOrderHistory, setShowOrderHistory] = useState(
+    searchParams.get('showOrders') === 'true'
+  );
+  const orderHistoryRef = useRef<HTMLDivElement>(null);
 
   const refreshUser = async () => {
     if (!user) return;
@@ -99,6 +111,19 @@ const ProfilePage = () => {
     };
 
     fetchShippingInfo();
+    
+    // Fetch user orders
+    if (user) {
+      setLoadingOrders(true);
+      fetchUserOrders(user.uid).then((orders) => {
+        console.log("Fetched orders:", orders);
+        setUserOrders(orders);
+        setLoadingOrders(false);
+      }).catch((error) => {
+        console.error("Error fetching orders:", error);
+        setLoadingOrders(false);
+      });
+    }
   }, [user]);
 
   // Clear verification message when user verifies email
@@ -572,6 +597,129 @@ const ProfilePage = () => {
               </div>
             </div>
           </form>
+        </div>
+
+        {/* Order History Section */}
+        <div className="w-full max-w-3xl shadow-lg border border-gray-100 p-8 rounded-lg flex flex-col gap-6 bg-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-800">Order History</h2>
+            </div>
+            <button
+              onClick={() => setShowOrderHistory(!showOrderHistory)}
+              className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              {showOrderHistory ? "Hide" : "Show"} ({userOrders.length})
+            </button>
+          </div>
+
+          {showOrderHistory && (
+            <div className="space-y-4">
+              {loadingOrders ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800 mx-auto"></div>
+                  <p className="text-sm text-gray-500 mt-2">Loading orders...</p>
+                </div>
+              ) : userOrders.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No orders yet</p>
+                  <p className="text-xs text-gray-400 mt-1">Start shopping to see your order history</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {userOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-600">Order #{order.orderNumber}</span>
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                              order.status === 'shipped' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="w-4 h-4 text-gray-400" />
+                            <span className="font-medium">${order.total.toFixed(2)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-500">
+                              {order.createdAt?.toDate ? 
+                                order.createdAt.toDate().toLocaleDateString() :
+                                new Date(order.createdAt).toLocaleDateString()
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                                             <div className="mt-3 pt-3 border-t border-gray-100">
+                         <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                           <span>{order.items.length} item{order.items.length !== 1 ? 's' : ''}</span>
+                           <span>•</span>
+                           <span>{order.shippingInfo?.name || 'N/A'}</span>
+                         </div>
+                         
+                                                   {/* Product Images */}
+                          <div className="flex gap-2 mb-3">
+                            {order.items.slice(0, 4).map((item, index) => (
+                              <Link
+                                key={index}
+                                href={`/products/${item.id}`}
+                                className="relative w-12 h-12 bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                              >
+                                <Image
+                                  src={Object.values(item.images)[0]}
+                                  alt={item.name}
+                                  fill
+                                  className="object-contain"
+                                />
+                              </Link>
+                            ))}
+                            {order.items.length > 4 && (
+                              <div className="relative w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <span className="text-xs text-gray-500 font-medium">
+                                  +{order.items.length - 4}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                         
+                         <div className="flex flex-wrap gap-1">
+                           {order.items.slice(0, 3).map((item, index) => (
+                             <span
+                               key={index}
+                               className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded"
+                             >
+                               {item.name} (x{item.quantity})
+                             </span>
+                           ))}
+                           {order.items.length > 3 && (
+                             <span className="text-xs text-gray-500">
+                               +{order.items.length - 3} more
+                             </span>
+                           )}
+                         </div>
+                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {showDeleteModal && (

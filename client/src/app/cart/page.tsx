@@ -9,7 +9,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc, increment } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc, increment, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const steps = [
@@ -48,10 +48,12 @@ const CartPage = () => {
       let orderNumber = 1;
       if (counterDoc.exists()) {
         orderNumber = counterDoc.data().current + 1;
+        // Update the counter
+        await updateDoc(counterRef, { current: increment(1) });
+      } else {
+        // Initialize the counter if it doesn't exist
+        await setDoc(counterRef, { current: 1 });
       }
-      
-      // Update the counter
-      await updateDoc(counterRef, { current: increment(1) });
       
       const orderData = {
         orderNumber: orderNumber,
@@ -65,6 +67,14 @@ const CartPage = () => {
 
       const docRef = await addDoc(collection(db, "orders"), orderData);
       console.log("Order created with ID:", docRef.id, "Order Number:", orderNumber);
+
+      // Add order to user's order history
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
+        orderHistory: increment(1),
+        orders: increment(1),
+        lastOrderDate: serverTimestamp()
+      });
 
       clearCart();
       console.log("Cart cleared, redirecting to order-success");

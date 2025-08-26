@@ -380,6 +380,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       }
       if (scrapedData.price) {
         form.setValue('price', scrapedData.price);
+        // If we have a formatted price, show it in a toast for confirmation
+        if (scrapedData.formattedPrice) {
+          toast.info(`Price extracted: ${scrapedData.formattedPrice}`);
+        }
       }
       if (scrapedData.brand) {
         form.setValue('brand', scrapedData.brand);
@@ -549,17 +553,28 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       <FormItem>
                         <FormLabel>Price *</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value) || 0)
-                            }
-                            placeholder="0.00"
-                            disabled={isSubmitting}
-                          />
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(parseFloat(e.target.value) || 0)
+                              }
+                              placeholder="0.00"
+                              disabled={isSubmitting}
+                              className="pr-20"
+                            />
+                            {field.value > 0 && (
+                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                                {new Intl.NumberFormat('en-US', {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 2
+                                }).format(field.value)}
+                              </div>
+                            )}
+                          </div>
                         </FormControl>
                         <FormDescription>
                           Enter the price of the product.

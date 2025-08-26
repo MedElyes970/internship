@@ -37,6 +37,17 @@ export async function POST(request: NextRequest) {
     const html = await response.text();
     const $ = cheerio.load(html);
 
+    // Debug: Log some basic HTML structure info
+    console.log(`Page title: "${$('title').text().trim()}"`);
+    console.log(`Number of H1 tags: ${$('h1').length}`);
+    console.log(`Number of H2 tags: ${$('h2').length}`);
+    console.log(`Number of H3 tags: ${$('h3').length}`);
+    
+    // Log all H1 tags for debugging
+    $('h1').each((i, el) => {
+      console.log(`H1[${i}]: "${$(el).text().trim()}"`);
+    });
+
     // Extract product information based on common selectors
     // This is a generic approach - you may need to customize for specific websites
     const scrapedData: any = {};
@@ -48,39 +59,190 @@ export async function POST(request: NextRequest) {
     const isElectroplanet = normalizedUrl.includes('electroplanet.tn');
     const isFnac = normalizedUrl.includes('fnac.tn');
 
-    // Product name - try multiple common selectors
-    let nameSelectors = [
-      'h1.product-title', 'h1.product-name', 'h1.title', 
-      '.product-title', '.product-name', '.title'
-    ];
+    // Product name - try multiple common selectors with better targeting
+    let nameSelectors = [];
 
-    // Website-specific selectors
+    // Website-specific selectors (more targeted)
     if (isTunisianet) {
-      nameSelectors.unshift('.product-name h1', '.product-title h1', '.product-info h1');
+      nameSelectors = [
+        'h1.product-name',
+        'h1.product-title', 
+        '.product-name h1',
+        '.product-title h1',
+        '.product-info h1',
+        '.product-details h1',
+        'h1[itemprop="name"]',
+        '.product-name',
+        '.product-title',
+        '[data-testid="product-title"]',
+        '.product-header h1',
+        '.product-main h1'
+      ];
     } else if (isMytek) {
-      nameSelectors.unshift('.product-details h1', '.product-title h1');
+      nameSelectors = [
+        'h1.product-title',
+        '.product-details h1',
+        '.product-title h1',
+        'h1[itemprop="name"]',
+        '.product-name',
+        '.product-title',
+        '[data-testid="product-title"]',
+        '.product-header h1'
+      ];
     } else if (isJumia) {
-      nameSelectors.unshift('.product-name h1', '.product-title h1');
+      nameSelectors = [
+        'h1.product-name',
+        'h1.product-title',
+        '.product-name h1',
+        '.product-title h1',
+        'h1[itemprop="name"]',
+        '.product-name',
+        '.product-title',
+        '[data-testid="product-title"]',
+        '.product-header h1'
+      ];
     } else if (isElectroplanet) {
-      nameSelectors.unshift('.product-title h1', '.product-name h1');
+      nameSelectors = [
+        'h1.product-title',
+        'h1.product-name',
+        '.product-title h1',
+        '.product-name h1',
+        'h1[itemprop="name"]',
+        '.product-name',
+        '.product-title',
+        '[data-testid="product-title"]',
+        '.product-header h1'
+      ];
     } else if (isFnac) {
-      nameSelectors.unshift('.product-title h1', '.product-name h1');
+      nameSelectors = [
+        'h1.product-title',
+        'h1.product-name',
+        '.product-title h1',
+        '.product-name h1',
+        'h1[itemprop="name"]',
+        '.product-name',
+        '.product-title',
+        '[data-testid="product-title"]',
+        '.product-header h1'
+      ];
+    } else {
+      // Generic selectors for unknown websites
+      nameSelectors = [
+        'h1[itemprop="name"]',
+        'h1.product-title',
+        'h1.product-name',
+        'h1.title',
+        '.product-title h1',
+        '.product-name h1',
+        '.product-title',
+        '.product-name',
+        '.title',
+        '[data-testid="product-title"]',
+        '.product-header h1',
+        '.product-main h1'
+      ];
     }
 
+    // Try to find the product name
     scrapedData.name = '';
     for (const selector of nameSelectors) {
       const name = $(selector).first().text().trim();
-      if (name) {
+      console.log(`Trying selector "${selector}": "${name}"`);
+      if (name && name.length > 3 && name.length < 200) {
         scrapedData.name = name;
+        console.log(`Found product name: "${name}"`);
         break;
+      }
+    }
+
+    // If still no name, try more aggressive selectors
+    if (!scrapedData.name) {
+      console.log('No name found with specific selectors, trying all H1 tags...');
+      // Look for any h1 tag that might contain the product name
+      $('h1').each((_, el) => {
+        const text = $(el).text().trim();
+        console.log(`Found H1 tag: "${text}"`);
+        if (text && text.length > 3 && text.length < 200 && 
+            !text.toLowerCase().includes('home') && 
+            !text.toLowerCase().includes('welcome') &&
+            !text.toLowerCase().includes('login') &&
+            !text.toLowerCase().includes('register')) {
+          scrapedData.name = text;
+          console.log(`Selected H1 as product name: "${text}"`);
+          return false; // break the loop
+        }
+      });
+    }
+
+    // If still no name, try H2 and H3 tags
+    if (!scrapedData.name) {
+      console.log('No name found in H1 tags, trying H2 and H3...');
+      const headings = $('h2, h3');
+      headings.each((_, el) => {
+        const text = $(el).text().trim();
+        console.log(`Found heading tag: "${text}"`);
+        if (text && text.length > 3 && text.length < 200 && 
+            !text.toLowerCase().includes('home') && 
+            !text.toLowerCase().includes('welcome') &&
+            !text.toLowerCase().includes('login') &&
+            !text.toLowerCase().includes('register') &&
+            !text.toLowerCase().includes('menu') &&
+            !text.toLowerCase().includes('navigation')) {
+          scrapedData.name = text;
+          console.log(`Selected heading as product name: "${text}"`);
+          return false; // break the loop
+        }
+      });
+    }
+
+    // Last resort: look for any element with common product name classes
+    if (!scrapedData.name) {
+      console.log('No name found in headings, trying common product name classes...');
+      const commonNameSelectors = [
+        '[class*="product-name"]',
+        '[class*="product-title"]',
+        '[class*="item-name"]',
+        '[class*="goods-name"]',
+        '[id*="product-name"]',
+        '[id*="product-title"]'
+      ];
+      
+      for (const selector of commonNameSelectors) {
+        const element = $(selector).first();
+        if (element.length > 0) {
+          const text = element.text().trim();
+          console.log(`Found element with selector "${selector}": "${text}"`);
+          if (text && text.length > 3 && text.length < 200) {
+            scrapedData.name = text;
+            console.log(`Selected element as product name: "${text}"`);
+            break;
+          }
+        }
       }
     }
 
     // Fallback to meta tags and title
     if (!scrapedData.name) {
-      scrapedData.name = 
-        $('meta[property="og:title"]').attr('content') ||
-        $('title').text().trim();
+      const ogTitle = $('meta[property="og:title"]').attr('content');
+      const metaTitle = $('meta[name="title"]').attr('content');
+      const pageTitle = $('title').text().trim();
+      
+      // Try to find the best title from meta tags
+      if (ogTitle && ogTitle.length > 3 && ogTitle.length < 200) {
+        scrapedData.name = ogTitle;
+      } else if (metaTitle && metaTitle.length > 3 && metaTitle.length < 200) {
+        scrapedData.name = metaTitle;
+      } else if (pageTitle && pageTitle.length > 3 && pageTitle.length < 200) {
+        // Clean up page title (remove site name, etc.)
+        let cleanTitle = pageTitle;
+        if (cleanTitle.includes('|')) {
+          cleanTitle = cleanTitle.split('|')[0].trim();
+        }
+        if (cleanTitle.includes('-')) {
+          cleanTitle = cleanTitle.split('-')[0].trim();
+        }
+        scrapedData.name = cleanTitle;
+      }
     }
 
     // Product description
@@ -93,7 +255,8 @@ export async function POST(request: NextRequest) {
     // Price - try multiple common selectors
     let priceSelectors = [
       '.price', '.product-price', '.current-price', '.regular-price', '.sale-price',
-      '[data-price]', '.price-value', '.product-price-value'
+      '[data-price]', '.price-value', '.product-price-value', '.price-current',
+      '.product-price .price', '.price-wrapper .price', '.price-container .price'
     ];
 
     // Website-specific price selectors
@@ -112,18 +275,61 @@ export async function POST(request: NextRequest) {
     let priceText = '';
     for (const selector of priceSelectors) {
       const price = $(selector).first().text().trim() || $(selector).first().attr('data-price');
+      console.log(`Trying price selector "${selector}": "${price}"`);
       if (price) {
         priceText = price;
+        console.log(`Found price with selector "${selector}": "${price}"`);
         break;
       }
     }
     
     if (priceText) {
-      // Extract numeric price from text (handle various formats)
-      const priceMatch = priceText.match(/[\d\s,]+\.?\d*/);
+      console.log(`Raw price text: "${priceText}"`);
+      
+      // Handle different price formats
+      let cleanPrice = '';
+      
+      // Remove currency symbols and extra text (including DT, د.ت, etc.)
+      const priceWithoutCurrency = priceText.replace(/[^\d\s,\.]/g, '').trim();
+      console.log(`Price without currency: "${priceWithoutCurrency}"`);
+      
+      // Extract the numeric part - try multiple patterns
+      let priceMatch = priceWithoutCurrency.match(/[\d\s,]+\.?\d*/);
+      
+      // If no match, try alternative patterns
+      if (!priceMatch) {
+        // Try to find price in format like "49,000 DT" or "99.99 DT"
+        priceMatch = priceWithoutCurrency.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/);
+      }
+      
+      // If still no match, try to find any sequence of digits with commas
+      if (!priceMatch) {
+        priceMatch = priceWithoutCurrency.match(/(\d+(?:,\d+)*)/);
+      }
+      
       if (priceMatch) {
-        const cleanPrice = priceMatch[0].replace(/[\s,]/g, '');
+        cleanPrice = priceMatch[0].replace(/[\s,]/g, '');
+        console.log(`Cleaned price: "${cleanPrice}"`);
+        
+        // Parse the price
         scrapedData.price = parseFloat(cleanPrice);
+        console.log(`Parsed price: ${scrapedData.price}`);
+        
+        // Also store the formatted price for display
+        if (!isNaN(scrapedData.price)) {
+          // Format with thousands separators
+          scrapedData.formattedPrice = new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+          }).format(scrapedData.price);
+          console.log(`Formatted price: ${scrapedData.formattedPrice}`);
+          
+          // Also log the original vs processed for debugging
+          console.log(`Price processing: "${priceText}" → "${priceWithoutCurrency}" → "${cleanPrice}" → ${scrapedData.price} → "${scrapedData.formattedPrice}"`);
+        }
+      } else {
+        console.log('No price pattern matched');
+        console.log(`Failed to extract price from: "${priceText}"`);
       }
     }
 
@@ -196,6 +402,9 @@ export async function POST(request: NextRequest) {
       if (scrapedData.name.length > 100) {
         scrapedData.name = scrapedData.name.substring(0, 97) + '...';
       }
+      console.log(`Final product name: "${scrapedData.name}"`);
+    } else {
+      console.log('No product name found after all attempts');
     }
 
     if (scrapedData.description) {

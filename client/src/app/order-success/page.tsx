@@ -15,6 +15,7 @@ const OrderSuccess = () => {
   const searchParams = useSearchParams();
 
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderNumber, setOrderNumber] = useState<number | null>(null);
   const [orderedItems, setOrderedItems] = useState<CartItemsType>([]);
   const [shippingInfo, setShippingInfo] = useState<ShippingFormInputs | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +46,7 @@ const OrderSuccess = () => {
         console.log("Order data from Firebase:", orderData);
         
         setOrderId(orderIdFromUrl);
+        setOrderNumber(orderData.orderNumber);
         setOrderedItems(orderData.items);
         setShippingInfo(orderData.shippingInfo);
       } catch (error) {
@@ -78,9 +80,9 @@ const OrderSuccess = () => {
         Your order has been successfully placed.
       </p>
 
-      {orderId && (
+      {orderNumber && (
         <p className="text-sm text-gray-500">
-          Order ID: <span className="font-medium">{orderId}</span>
+          Order #: <span className="font-medium">{orderNumber}</span>
         </p>
       )}
 

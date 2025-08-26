@@ -3,63 +3,60 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import useCartStore from "@/stores/cartStore";
-import { db } from "@/lib/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { CartItemsType, ShippingFormInputs } from "@/types";
 import { CheckCircle } from "lucide-react";
 import Image from "next/image";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-interface OrderSuccessProps {
-  shippingForm: ShippingFormInputs;
-}
-
-const OrderSuccess = ({ shippingForm }: OrderSuccessProps) => {
+const OrderSuccess = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const { cart, clearCart } = useCartStore();
+  const searchParams = useSearchParams();
 
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderedItems, setOrderedItems] = useState<CartItemsType>([]);
+  const [shippingInfo, setShippingInfo] = useState<ShippingFormInputs | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const createOrder = async () => {
-      if (!user || cart.length === 0) {
-        router.push("/cart");
-        return;
-      }
+    console.log("OrderSuccess useEffect running");
+    const orderIdFromUrl = searchParams.get('orderId');
+    console.log("OrderId from URL:", orderIdFromUrl);
+    
+    if (!orderIdFromUrl) {
+      console.log("No orderId found in URL, redirecting to cart");
+      router.push("/cart");
+      return;
+    }
 
+    const fetchOrderData = async () => {
       try {
-        // Save a copy of cart to display after clearing
-        setOrderedItems(cart);
+        console.log("Fetching order data from Firebase...");
+        const orderDoc = await getDoc(doc(db, "orders", orderIdFromUrl));
+        
+        if (!orderDoc.exists()) {
+          console.log("Order not found in Firebase, redirecting to cart");
+          router.push("/cart");
+          return;
+        }
 
-        const orderData = {
-          userId: user.uid,
-          items: cart,
-          shippingInfo: shippingForm,
-          total: cart.reduce(
-            (acc, item) => acc + item.price * item.quantity,
-            0
-          ),
-          createdAt: serverTimestamp(),
-          status: "pending", // realistic statuses: pending, processing, shipped
-        };
-
-        const docRef = await addDoc(collection(db, "orders"), orderData);
-        setOrderId(docRef.id);
-
-        // Clear cart after saving
-        clearCart();
+        const orderData = orderDoc.data();
+        console.log("Order data from Firebase:", orderData);
+        
+        setOrderId(orderIdFromUrl);
+        setOrderedItems(orderData.items);
+        setShippingInfo(orderData.shippingInfo);
       } catch (error) {
-        console.error("Error creating order:", error);
+        console.error("Error fetching order data:", error);
+        router.push("/cart");
       } finally {
         setLoading(false);
       }
     };
 
-    createOrder();
-  }, [user, cart, shippingForm, clearCart, router]);
+    fetchOrderData();
+  }, [searchParams, router]);
 
   if (loading)
     return (

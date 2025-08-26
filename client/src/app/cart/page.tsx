@@ -32,9 +32,14 @@ const CartPage = () => {
   const isCartEmpty = cart.length === 0;
 
   const handleConfirmOrder = async () => {
-    if (!user || !shippingForm || cart.length === 0) return;
+    console.log("handleConfirmOrder called");
+    if (!user || !shippingForm || cart.length === 0) {
+      console.log("Early return - missing data:", { user: !!user, shippingForm: !!shippingForm, cartLength: cart.length });
+      return;
+    }
 
     try {
+      console.log("Creating order...");
       const orderData = {
         userId: user.uid,
         items: cart,
@@ -44,10 +49,13 @@ const CartPage = () => {
         status: "pending",
       };
 
-      await addDoc(collection(db, "orders"), orderData);
+      const docRef = await addDoc(collection(db, "orders"), orderData);
+      console.log("Order created with ID:", docRef.id);
 
       clearCart();
-      router.push("/order-success", { scroll: false });
+      console.log("Cart cleared, redirecting to order-success");
+      // Use URL parameters instead of localStorage
+      router.push(`/order-success?orderId=${docRef.id}`, { scroll: false });
     } catch (error) {
       console.error("Error creating order:", error);
     }

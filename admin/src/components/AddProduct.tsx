@@ -31,9 +31,18 @@ import {
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { ScrollArea } from "./ui/scroll-area";
-import { addProduct, Product, getNextProductReferencePreview } from "@/lib/products";
-import { getCategories, getSubcategoriesByCategoryId, Category, Subcategory } from "@/lib/categories";
-import { Loader2, CheckCircle, AlertCircle, Plus, X } from "lucide-react";
+import {
+  addProduct,
+  Product,
+  getNextProductReferencePreview,
+} from "@/lib/products";
+import {
+  getCategories,
+  getSubcategoriesByCategoryId,
+  Category,
+  Subcategory,
+} from "@/lib/categories";
+import { Loader2, CheckCircle, AlertCircle, Plus, X, Globe, Search } from "lucide-react";
 import { toast } from "sonner";
 
 const formSchema = z.object({
@@ -72,6 +81,8 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
   const [newSpecKey, setNewSpecKey] = useState("");
   const [newSpecValue, setNewSpecValue] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [rivalUrl, setRivalUrl] = useState("");
+  const [isScraping, setIsScraping] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -82,7 +93,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       category: "",
       subcategory: "",
       brand: "",
-      stock: 0,
+      stock: Number.MAX_SAFE_INTEGER,
       stockStatus: "in-stock",
       images: [],
       specs: {},
@@ -125,7 +136,9 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     const fetchSubcategories = async () => {
       if (selectedCategory) {
         try {
-          const category = categories.find(cat => cat.name === selectedCategory);
+          const category = categories.find(
+            (cat) => cat.name === selectedCategory
+          );
           if (category) {
             const data = await getSubcategoriesByCategoryId(category.id!);
             setSubcategories(data);
@@ -319,6 +332,114 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     }
   };
 
+  // Web scraping function to extract product information
+  const scrapeProductInfo = async (url: string) => {
+    if (!url.trim()) {
+      toast.error("Please enter a valid URL");
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(url.startsWith('http') ? url : `https://${url}`);
+    } catch {
+      toast.error("Please enter a valid URL format");
+      return;
+    }
+
+    setIsScraping(true);
+    try {
+      // Call our API endpoint to scrape the product
+      const response = await fetch('/api/scrape-product', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to scrape product information');
+      }
+
+      const scrapedData = await response.json();
+      
+      // Check if we got any useful data
+      if (!scrapedData.name && !scrapedData.description && !scrapedData.price) {
+        toast.warning("No product information found. The website might not be supported or the product page structure is different.");
+        return;
+      }
+      
+      // Auto-fill the form with scraped data
+      if (scrapedData.name) {
+        form.setValue('name', scrapedData.name);
+      }
+      if (scrapedData.description) {
+        form.setValue('description', scrapedData.description);
+      }
+      if (scrapedData.price) {
+        form.setValue('price', scrapedData.price);
+      }
+      if (scrapedData.brand) {
+        form.setValue('brand', scrapedData.brand);
+      }
+      if (scrapedData.images && scrapedData.images.length > 0) {
+        setImageUrls(scrapedData.images);
+        form.setValue('images', scrapedData.images);
+      }
+      if (scrapedData.specs && Object.keys(scrapedData.specs).length > 0) {
+        setSpecs(scrapedData.specs);
+        form.setValue('specs', scrapedData.specs);
+      }
+
+      // Try to suggest category based on scraped content
+      if (scrapedData.name || scrapedData.description) {
+        const content = `${scrapedData.name || ''} ${scrapedData.description || ''}`.toLowerCase();
+        
+        // Simple category detection based on keywords
+        if (content.includes('camera') || content.includes('surveillance') || content.includes('security')) {
+          const cameraCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('camera') || 
+            cat.name.toLowerCase().includes('surveillance') ||
+            cat.name.toLowerCase().includes('security')
+          );
+          if (cameraCategory) {
+            form.setValue('category', cameraCategory.name);
+            toast.info(`Suggested category: ${cameraCategory.name}`);
+          }
+        } else if (content.includes('phone') || content.includes('mobile') || content.includes('smartphone')) {
+          const phoneCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes('phone') || 
+            cat.name.toLowerCase().includes('mobile')
+          );
+          if (phoneCategory) {
+            form.setValue('category', phoneCategory.name);
+            toast.info(`Suggested category: ${phoneCategory.name}`);
+          }
+        }
+        // Add more category detection logic as needed
+      }
+
+      // Show what was scraped
+      const scrapedFields = [];
+      if (scrapedData.name) scrapedFields.push('name');
+      if (scrapedData.description) scrapedFields.push('description');
+      if (scrapedData.price) scrapedFields.push('price');
+      if (scrapedData.brand) scrapedFields.push('brand');
+      if (scrapedData.images?.length > 0) scrapedFields.push(`${scrapedData.images.length} images`);
+      if (Object.keys(scrapedData.specs || {}).length > 0) scrapedFields.push('specifications');
+
+      toast.success(`Product information scraped successfully! Found: ${scrapedFields.join(', ')}`);
+      setRivalUrl(""); // Clear the URL field after successful scraping
+    } catch (error) {
+      console.error('Error scraping product:', error);
+      toast.error("Failed to scrape product information. Please check the URL and try again.");
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
   return (
     <SheetContent>
       <ScrollArea className="h-screen">
@@ -330,6 +451,49 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-6"
               >
+                {/* Rival Website Scraping */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    Import from Rival Website
+                  </h3>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter product URL from rival website (e.g., www.tunisianet.com.tn/...)"
+                      value={rivalUrl}
+                      onChange={(e) => setRivalUrl(e.target.value)}
+                      disabled={isScraping}
+                      className="flex-1"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && rivalUrl.trim() && !isScraping) {
+                          scrapeProductInfo(rivalUrl);
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => scrapeProductInfo(rivalUrl)}
+                      disabled={isScraping || !rivalUrl.trim()}
+                      size="sm"
+                    >
+                      {isScraping ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Scraping...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="mr-2 h-4 w-4" />
+                          Scrape
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Paste a product URL from a rival website to automatically fill the form with product information.
+                  </p>
+                </div>
+
                 {/* Basic Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Basic Information</h3>
@@ -420,7 +584,11 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                             type="number"
                             min="1"
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                            onChange={(e) =>
+                              field.onChange(
+                                parseInt(e.target.value) || undefined
+                              )
+                            }
                             placeholder="Auto-assigned if left empty"
                             disabled={isSubmitting}
                           />
@@ -485,11 +653,21 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
-                          disabled={!selectedCategory || subcategories.length === 0}
+                          disabled={
+                            !selectedCategory || subcategories.length === 0
+                          }
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder={!selectedCategory ? "Select a category first" : subcategories.length === 0 ? "No subcategories available" : "Select a subcategory"} />
+                              <SelectValue
+                                placeholder={
+                                  !selectedCategory
+                                    ? "Select a category first"
+                                    : subcategories.length === 0
+                                    ? "No subcategories available"
+                                    : "Select a subcategory"
+                                }
+                              />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>

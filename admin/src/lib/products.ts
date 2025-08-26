@@ -10,11 +10,15 @@ import {
   orderBy,
   serverTimestamp,
   where,
-  increment 
+  increment,
+  getDoc,
+  setDoc,
+  runTransaction 
 } from 'firebase/firestore';
 
 export interface Product {
   id?: string;
+  reference?: number;
   name: string;
   description?: string;
   price: number;
@@ -31,6 +35,38 @@ export interface Product {
 }
 
 const COLLECTION_NAME = 'products';
+const COUNTERS_COLLECTION = 'counters';
+const PRODUCT_REFERENCE_DOC = 'productReference';
+
+// Get next product reference atomically (increments and returns new value)
+export const getNextProductReference = async (): Promise<number> => {
+  const counterRef = doc(collection(db, COUNTERS_COLLECTION), PRODUCT_REFERENCE_DOC);
+  const nextValue = await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(counterRef);
+    const current = snapshot.exists() ? (snapshot.data().current as number) : 0;
+    const updated = (Number.isFinite(current) ? current : 0) + 1;
+    if (snapshot.exists()) {
+      transaction.update(counterRef, { current: updated, updatedAt: serverTimestamp() });
+    } else {
+      transaction.set(counterRef, { current: updated, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    }
+    return updated;
+  });
+  return nextValue;
+};
+
+// Read-only preview of the next product reference (does not increment)
+export const getNextProductReferencePreview = async (): Promise<number> => {
+  try {
+    const counterRef = doc(collection(db, COUNTERS_COLLECTION), PRODUCT_REFERENCE_DOC);
+    const snapshot = await getDoc(counterRef);
+    const current = snapshot.exists() ? (snapshot.data().current as number) : 0;
+    const next = (Number.isFinite(current) ? current : 0) + 1;
+    return next;
+  } catch (error) {
+    return 1;
+  }
+};
 
 // Add a new product
 export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -68,8 +104,14 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
       }
     }
 
+    // Determine reference (auto-increment if not provided)
+    const referenceValue = productData.reference && productData.reference > 0
+      ? productData.reference
+      : await getNextProductReference();
+
     const docRef = await addDoc(collection(db, COLLECTION_NAME), {
       ...productData,
+      reference: referenceValue,
       stockStatus,
       salesCount: 0,
       createdAt: serverTimestamp(),
@@ -79,6 +121,7 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
     return {
       id: docRef.id,
       ...productData,
+      reference: referenceValue,
       stockStatus,
       salesCount: 0,
     };

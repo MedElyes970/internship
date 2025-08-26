@@ -31,7 +31,7 @@ import {
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { ScrollArea } from "./ui/scroll-area";
-import { addProduct, Product } from "@/lib/products";
+import { addProduct, Product, getNextProductReferencePreview } from "@/lib/products";
 import { getCategories, getSubcategoriesByCategoryId, Category, Subcategory } from "@/lib/categories";
 import { Loader2, CheckCircle, AlertCircle, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -44,12 +44,13 @@ const formSchema = z.object({
   description: z.string().optional(),
   price: z.number().min(0.01, { message: "Price must be greater than 0" }),
   category: z.string().optional(),
-  subcategory: z.string().optional(),
+  subcategory: z.string().min(1, { message: "Subcategory is required" }),
   brand: z.string().optional(),
   stock: z.number().min(0, { message: "Stock cannot be negative" }).optional(),
   stockStatus: z.enum(["in-stock", "sur-commande", "out-of-stock"]).optional(),
   images: z.array(z.string()).optional(),
   specs: z.record(z.any()).optional(),
+  reference: z.number().int().positive().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -85,8 +86,25 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       stockStatus: "in-stock",
       images: [],
       specs: {},
+      reference: undefined,
     },
   });
+
+  // Prefill reference with the next auto-assigned number so admin can see/change it
+  useEffect(() => {
+    const prefillReference = async () => {
+      try {
+        const currentRef = form.getValues("reference");
+        if (!currentRef) {
+          const nextRef = await getNextProductReferencePreview();
+          form.setValue("reference", nextRef);
+        }
+      } catch (e) {
+        // ignore preview failure; field remains editable
+      }
+    };
+    prefillReference();
+  }, [form]);
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -180,12 +198,13 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
         description: data.description?.trim() || "",
         price: data.price,
         category: data.category || "",
-        subcategory: data.subcategory || "",
+        subcategory: data.subcategory,
         brand: data.brand?.trim() || "",
         stock: data.stock || 0,
         stockStatus: data.stockStatus,
         images: allImageUrls,
         specs: specs,
+        reference: data.reference,
       });
 
       toast.success("Product added successfully!");
@@ -387,6 +406,34 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                   />
                 </div>
 
+                {/* Reference */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Reference</h3>
+                  <FormField
+                    control={form.control}
+                    name="reference"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Reference (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                            placeholder="Auto-assigned if left empty"
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Leave empty to auto-assign the next reference number.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 {/* Category and Brand */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Category & Brand</h3>
@@ -434,7 +481,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                     name="subcategory"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Subcategory (Optional)</FormLabel>
+                        <FormLabel>Subcategory *</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
@@ -457,7 +504,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                           </SelectContent>
                         </Select>
                         <FormDescription>
-                          Select a subcategory for more specific organization (optional).
+                          Select the subcategory this product belongs to.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

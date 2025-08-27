@@ -1161,15 +1161,15 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
 
                     {Object.keys(specs).length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm font-medium text-foreground">
                           Added Specifications:
                         </p>
                         {Object.entries(specs).map(([key, value]) => (
                           <div
                             key={key}
-                            className="flex items-center justify-between p-2 bg-gray-50 rounded-md"
+                            className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md"
                           >
-                            <span className="text-sm font-medium">{key}:</span>
+                            <span className="text-sm font-medium text-foreground">{key}:</span>
                             <span className="text-sm text-muted-foreground">
                               {value}
                             </span>

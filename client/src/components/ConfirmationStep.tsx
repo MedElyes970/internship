@@ -4,6 +4,7 @@ import { ShippingFormInputs, CartItemsType } from "@/types";
 import Image from "next/image";
 import { ArrowLeft, Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { isDiscountValid, getCurrentPrice, formatPrice } from "@/lib/products";
 
 type Props = {
   shippingForm: ShippingFormInputs;
@@ -37,6 +38,14 @@ const ConfirmationStep = ({
     (acc, item) => acc + item.price * item.quantity,
     0
   );
+
+  const totalWithDiscounts = cart.reduce((acc, item) => {
+    const hasValidDiscount = item.hasDiscount && item.discountPercentage && isDiscountValid(item);
+    const currentPrice = getCurrentPrice(item);
+    return acc + currentPrice * item.quantity;
+  }, 0);
+
+  const totalSavings = subtotal - totalWithDiscounts;
 
   const handleConfirm = () => {
     if (hasStockIssues) {
@@ -87,40 +96,63 @@ const ConfirmationStep = ({
       <div className="flex flex-col gap-4">
         <h3 className="text-lg font-semibold">Order Summary</h3>
         <div className="space-y-4">
-          {cart.map((item) => (
-            <div key={item.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative w-16 h-16 bg-gray-50 rounded-lg overflow-hidden">
-                  <Image
-                    src={Object.values(item.images)[0]}
-                    alt={item.name}
-                    fill
-                    className="object-contain"
-                  />
+          {cart.map((item) => {
+            const hasValidDiscount = item.hasDiscount && item.discountPercentage && isDiscountValid(item);
+            const currentPrice = getCurrentPrice(item);
+            const totalPrice = currentPrice * item.quantity;
+            const originalTotal = item.price * item.quantity;
+            
+            return (
+              <div key={item.id} className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-16 h-16 bg-gray-50 rounded-lg overflow-hidden">
+                    <Image
+                      src={Object.values(item.images)[0]}
+                      alt={item.name}
+                      fill
+                      className="object-contain"
+                    />
+                    {/* Discount Badge */}
+                    {hasValidDiscount && (
+                      <div className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1 py-0.5 rounded">
+                        {item.discountPercentage}% OFF
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{item.name}</span>
+                    <span className="text-xs text-gray-500">
+                      Qty: {item.quantity} · {formatPrice(currentPrice)} each
+                    </span>
+                    {hasValidDiscount && (
+                      <span className="text-xs text-green-600">
+                        You save {formatPrice(item.price - currentPrice)} per item
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">{item.name}</span>
-                  <span className="text-xs text-gray-500">
-                    Qty: {item.quantity} · ${item.price.toFixed(2)} each
-                  </span>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-green-600">{formatPrice(totalPrice)}</span>
+                  {hasValidDiscount && (
+                    <span className="text-xs text-gray-500 line-through">{formatPrice(originalTotal)}</span>
+                  )}
                 </div>
               </div>
-              <span className="text-sm font-medium">
-                ${(item.price * item.quantity).toFixed(2)}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <hr className="border-gray-200" />
         <div className="flex justify-between text-sm">
           <span className="text-gray-500">Subtotal</span>
-          <span className="font-medium">${subtotal.toFixed(2)}</span>
+          <span className="font-medium">{formatPrice(subtotal)}</span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Discount</span>
-          <span className="font-medium">$0.00</span>
-        </div>
+        {totalSavings > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Total Savings</span>
+            <span className="font-medium text-green-600">-{formatPrice(totalSavings)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-sm">
           <span className="text-gray-500">Shipping Fee</span>
           <span className="font-medium">$0.00</span>
@@ -128,7 +160,7 @@ const ConfirmationStep = ({
         <hr className="border-gray-200" />
         <div className="flex justify-between">
           <span className="text-gray-800 font-semibold">Total</span>
-          <span className="font-semibold">${subtotal.toFixed(2)}</span>
+          <span className="font-semibold">{formatPrice(totalWithDiscounts)}</span>
         </div>
       </div>
 

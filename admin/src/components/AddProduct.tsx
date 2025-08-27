@@ -232,6 +232,14 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     setIsSubmitting(true);
     setSubmitStatus("idle");
 
+    // Debug form data
+    console.log('Form submission data:', data);
+    console.log('Local discount state:', {
+      hasDiscount,
+      discountPercentage,
+      discountEndDate
+    });
+
     try {
       const uploadedUrls: string[] = [];
       for (const file of selectedFiles) {

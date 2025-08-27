@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc, increment, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { updateProductsAfterOrder, checkProductsStock } from "@/lib/products";
+import { updateProductsAfterOrder, checkProductsStock, isDiscountValid, getCurrentPrice, formatPrice } from "@/lib/products";
 
 const steps = [
   { id: 1, title: "Shopping Cart" },
@@ -112,7 +112,11 @@ const CartPage = () => {
         userId: user.uid,
         items: cart,
         shippingInfo: shippingForm,
-        total: cart.reduce((acc, item) => acc + item.price * item.quantity, 0),
+        total: cart.reduce((acc, item) => {
+          const hasValidDiscount = item.hasDiscount && item.discountPercentage && isDiscountValid(item);
+          const currentPrice = getCurrentPrice(item);
+          return acc + currentPrice * item.quantity;
+        }, 0),
         createdAt: serverTimestamp(),
         status: "pending",
       };
@@ -209,40 +213,63 @@ const CartPage = () => {
                 
                 {/* Cart Items */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                  {cart.map((item) => (
-                    <div
-                      className="flex items-center justify-between"
-                      key={item.id}
-                    >
-                      <div className="flex gap-8">
-                        <div className="relative w-32 h-32 bg-gray-50 rounded-lg overflow-hidden">
-                          <Image
-                            src={Object.values(item.images)[0]}
-                            alt={item.name}
-                            fill
-                            className="object-contain"
-                          />
-                        </div>
-                        <div className="flex flex-col justify-between">
-                          <div className="flex flex-col gap-1">
-                            <p className="text-sm font-medium">{item.name}</p>
-                            <p className="text-xs text-gray-500">
-                              Quantity: {item.quantity}
-                            </p>
-                          </div>
-                          <p className="font-medium">
-                            ${(item.price * item.quantity).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => removeFromCart(item)}
-                        className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 transition-all duration-300 text-red-400 flex items-center justify-center cursor-pointer"
+                  {cart.map((item) => {
+                    const hasValidDiscount = item.hasDiscount && item.discountPercentage && isDiscountValid(item);
+                    const currentPrice = getCurrentPrice(item);
+                    const totalPrice = currentPrice * item.quantity;
+                    const originalTotal = item.price * item.quantity;
+                    const savings = originalTotal - totalPrice;
+                    
+                    return (
+                      <div
+                        className="flex items-center justify-between"
+                        key={item.id}
                       >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex gap-8">
+                          <div className="relative w-32 h-32 bg-gray-50 rounded-lg overflow-hidden">
+                            <Image
+                              src={Object.values(item.images)[0]}
+                              alt={item.name}
+                              fill
+                              className="object-contain"
+                            />
+                            {/* Discount Badge */}
+                            {hasValidDiscount && (
+                              <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
+                                {item.discountPercentage}% OFF
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col justify-between">
+                            <div className="flex flex-col gap-1">
+                              <p className="text-sm font-medium">{item.name}</p>
+                              <p className="text-xs text-gray-500">
+                                Quantity: {item.quantity}
+                              </p>
+                              {/* Price Display */}
+                              <div className="flex flex-col">
+                                {hasValidDiscount ? (
+                                  <>
+                                    <p className="font-medium text-green-600">{formatPrice(totalPrice)}</p>
+                                    <p className="text-xs text-gray-500 line-through">{formatPrice(originalTotal)}</p>
+                                    <p className="text-xs text-green-600">You save {formatPrice(savings)}</p>
+                                  </>
+                                ) : (
+                                  <p className="font-medium">{formatPrice(totalPrice)}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeFromCart(item)}
+                          className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 transition-all duration-300 text-red-400 flex items-center justify-center cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )
@@ -268,33 +295,40 @@ const CartPage = () => {
           <div className="w-full shadow-lg border-1 border-gray-100 p-8 rounded-lg flex flex-col gap-8 h-max">
             <h2 className="font-semibold">Cart Details</h2>
             <div className="flex flex-col gap-4">
-              <div className="flex justify-between text-sm">
-                <p className="text-gray-500">Subtotal</p>
-                <p className="font-medium">
-                  $
-                  {cart
-                    .reduce((acc, item) => acc + item.price * item.quantity, 0)
-                    .toFixed(2)}
-                </p>
-              </div>
-              <div className="flex justify-between text-sm">
-                <p className="text-gray-500">Discount 10%</p>
-                <p className="font-medium">$0.00</p>
-              </div>
-              <div className="flex justify-between text-sm">
-                <p className="text-gray-500">Shipping Fee</p>
-                <p className="font-medium">$0.00</p>
-              </div>
-              <hr className="border-gray-200" />
-              <div className="flex justify-between">
-                <p className="text-gray-800 font-semibold">Total</p>
-                <p className="font-medium">
-                  $
-                  {cart
-                    .reduce((acc, item) => acc + item.price * item.quantity, 0)
-                    .toFixed(2)}
-                </p>
-              </div>
+              {/* Calculate totals with discounts */}
+              {(() => {
+                const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+                const totalWithDiscounts = cart.reduce((acc, item) => {
+                  const hasValidDiscount = item.hasDiscount && item.discountPercentage && isDiscountValid(item);
+                  const currentPrice = getCurrentPrice(item);
+                  return acc + currentPrice * item.quantity;
+                }, 0);
+                const totalSavings = subtotal - totalWithDiscounts;
+                
+                return (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <p className="text-gray-500">Subtotal</p>
+                      <p className="font-medium">{formatPrice(subtotal)}</p>
+                    </div>
+                    {totalSavings > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <p className="text-gray-500">Total Savings</p>
+                        <p className="font-medium text-green-600">-{formatPrice(totalSavings)}</p>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                      <p className="text-gray-500">Shipping Fee</p>
+                      <p className="font-medium">$0.00</p>
+                    </div>
+                    <hr className="border-gray-200" />
+                    <div className="flex justify-between">
+                      <p className="text-gray-800 font-semibold">Total</p>
+                      <p className="font-medium">{formatPrice(totalWithDiscounts)}</p>
+                    </div>
+                  </>
+                );
+              })()}
 
               <button
                 onClick={() =>

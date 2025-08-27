@@ -5,6 +5,66 @@ import { fetchCategoriesWithSubcategories } from "./categories";
 
 const PRODUCTS_COLLECTION = "products";
 
+// Helper function to check if discount is still valid (not expired)
+export const isDiscountValid = (product: ProductType): boolean => {
+  console.log('Checking discount validity for:', product.name, {
+    hasDiscount: product.hasDiscount,
+    discountPercentage: product.discountPercentage,
+    discountEndDate: product.discountEndDate
+  });
+  
+  // Basic validation: must have discount enabled and percentage > 0
+  if (!product.hasDiscount || !product.discountPercentage || product.discountPercentage <= 0) {
+    console.log('Discount invalid: missing required fields');
+    return false;
+  }
+  
+  // If no end date, discount is always valid
+  if (!product.discountEndDate) {
+    console.log('Discount valid: no end date (permanent discount)');
+    return true;
+  }
+  
+  // Check if discount has expired
+  try {
+    const now = new Date();
+    const endDate = product.discountEndDate.toDate ? product.discountEndDate.toDate() : new Date(product.discountEndDate);
+    const isValid = now < endDate;
+    
+    console.log('Discount end date check:', { now, endDate, isValid });
+    return isValid;
+  } catch (error) {
+    console.error('Error checking discount end date:', error);
+    // If there's an error parsing the date, assume discount is valid
+    return true;
+  }
+};
+
+// Helper function to get current price (discounted if valid, original if not)
+export const getCurrentPrice = (product: ProductType): number => {
+  const isValid = isDiscountValid(product);
+  const currentPrice = isValid && product.discountedPrice ? product.discountedPrice : product.price;
+  
+  console.log('Getting current price for:', product.name, {
+    originalPrice: product.price,
+    discountedPrice: product.discountedPrice,
+    isValid,
+    currentPrice
+  });
+  
+  return currentPrice;
+};
+
+// Helper function to format price in Tunisian format (no decimals, comma separator)
+export const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
+};
+
 export type FetchProductsOptions = {
   categorySlug?: string | null;
   subcategorySlug?: string | null;
@@ -14,7 +74,22 @@ export type FetchProductsOptions = {
 
 const mapDocToProduct = (snap: any): ProductType => {
   const data = snap.data();
-  return {
+  
+  // Debug discount data mapping
+  console.log('Mapping product:', data.name, 'Raw Firestore data:', data);
+  console.log('Discount fields found:', {
+    hasDiscount: data.hasDiscount,
+    discountPercentage: data.discountPercentage,
+    originalPrice: data.originalPrice,
+    discountedPrice: data.discountedPrice,
+    discountEndDate: data.discountEndDate,
+    // Check for alternative field names
+    discount: data.discount,
+    discount_price: data.discount_price,
+    discount_percentage: data.discount_percentage
+  });
+  
+  const mappedProduct = {
     id: snap.id,
     name: data.name ?? "",
     shortDescription: data.shortDescription ?? "",
@@ -23,7 +98,16 @@ const mapDocToProduct = (snap: any): ProductType => {
     images: data.images ?? {},
     salesCount: typeof data.salesCount === "number" ? data.salesCount : 0,
     stock: typeof data.stock === "number" ? data.stock : undefined,
+    // Map discount fields
+    hasDiscount: data.hasDiscount ?? false,
+    discountPercentage: typeof data.discountPercentage === "number" ? data.discountPercentage : undefined,
+    originalPrice: typeof data.originalPrice === "number" ? data.originalPrice : undefined,
+    discountedPrice: typeof data.discountedPrice === "number" ? data.discountedPrice : undefined,
+    discountEndDate: data.discountEndDate || undefined,
   };
+  
+  console.log('Mapped product:', mappedProduct);
+  return mappedProduct;
 };
 
 // Convert slug to actual category name
@@ -82,7 +166,20 @@ export const fetchProducts = async (options: FetchProductsOptions = {}): Promise
 
   const q = constraints.length ? query(colRef, ...constraints) : query(colRef);
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(mapDocToProduct);
+  
+  console.log('Firestore query result:', snapshot.docs.length, 'products');
+  
+  const products = snapshot.docs.map(mapDocToProduct);
+  
+  console.log('Mapped products with discounts:', products.filter(p => p.hasDiscount).map(p => ({
+    name: p.name,
+    hasDiscount: p.hasDiscount,
+    discountPercentage: p.discountPercentage,
+    originalPrice: p.originalPrice,
+    discountedPrice: p.discountedPrice
+  })));
+  
+  return products;
 };
 
 export const fetchProductById = async (id: string): Promise<ProductType | null> => {

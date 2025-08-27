@@ -9,6 +9,12 @@ export type ProductType = {
   images: Record<string, string>;
   salesCount?: number;
   stock?: number;
+  // Discount fields
+  hasDiscount?: boolean;
+  discountPercentage?: number;
+  originalPrice?: number;
+  discountedPrice?: number;
+  discountEndDate?: any;
 };
 
 export type ProductsType = ProductType[];

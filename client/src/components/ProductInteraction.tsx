@@ -5,6 +5,7 @@ import { ProductType } from "@/types";
 import { Minus, Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-toastify";
+import { isDiscountValid, getCurrentPrice, formatPrice } from "@/lib/products";
 
 const ProductInteraction = ({
   product,
@@ -14,6 +15,10 @@ const ProductInteraction = ({
   const [quantity, setQuantity] = useState(1);
 
   const { addToCart } = useCartStore();
+
+  // Get current price (discounted if valid, original if not)
+  const currentPrice = getCurrentPrice(product);
+  const hasValidDiscount = product.hasDiscount && product.discountPercentage && isDiscountValid(product);
 
   const handleQuantityChange = (type: "increment" | "decrement") => {
     if (type === "increment") {
@@ -49,6 +54,21 @@ const ProductInteraction = ({
   
   return (
     <div className="flex flex-col gap-4 mt-4">
+      {/* DISCOUNT INFO */}
+      {hasValidDiscount && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+          <div className="text-sm text-green-800">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-medium">Special Offer!</span>
+              <span className="text-lg font-bold">{formatPrice(currentPrice)}</span>
+            </div>
+            <div className="text-xs text-green-600">
+              You save {formatPrice(product.price - currentPrice)} ({product.discountPercentage}% off original price)
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* STOCK STATUS */}
       {product.stock !== undefined && (
         <div className="text-sm">
@@ -82,6 +102,16 @@ const ProductInteraction = ({
             <Plus className="w-4 h-4" />
           </button>
         </div>
+      </div>
+      
+      {/* TOTAL PRICE */}
+      <div className="text-sm text-gray-600">
+        Total: <span className="font-medium">{formatPrice(currentPrice * quantity)}</span>
+        {hasValidDiscount && (
+          <span className="text-xs text-gray-500 ml-2">
+            (Original: {formatPrice(product.price * quantity)})
+          </span>
+        )}
       </div>
       
       {/* BUTTONS */}

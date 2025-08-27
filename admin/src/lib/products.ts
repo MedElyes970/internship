@@ -151,6 +151,7 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
     return {
       id: docRef.id,
       ...productData,
+      ...discountData,
       reference: referenceValue,
       stockStatus,
       salesCount: 0,

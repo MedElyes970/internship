@@ -9,6 +9,7 @@ import { getProducts, deleteProduct, Product, getStockStatusColor, getStockStatu
 import { getCategoriesWithSubcategories } from "@/lib/categories";
 import { toast } from "sonner";
 import AddProduct from "@/components/AddProduct";
+import EditProduct from "@/components/EditProduct";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 
@@ -17,6 +18,8 @@ export default function ProductsPage() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
@@ -77,6 +80,22 @@ export default function ProductsPage() {
   const handleAddSuccess = () => {
     setIsAddSheetOpen(false);
     fetchProducts(); // Refresh the list
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditSheetOpen(false);
+    setSelectedProduct(null);
+    fetchProducts(); // Refresh the list
+  };
+
+  const handleEditCancel = () => {
+    setIsEditSheetOpen(false);
+    setSelectedProduct(null);
+  };
+
+  const openEditSheet = (product: Product) => {
+    setSelectedProduct(product);
+    setIsEditSheetOpen(true);
   };
 
   const formatDate = (timestamp: any) => {
@@ -293,7 +312,12 @@ export default function ProductsPage() {
                 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => openEditSheet(product)}
+                  >
                     <Edit className="mr-2 h-3 w-3" />
                     Edit
                   </Button>
@@ -352,6 +376,19 @@ export default function ProductsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Product Sheet */}
+      {selectedProduct && (
+        <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
+          <SheetContent>
+            <EditProduct 
+              product={selectedProduct}
+              onSuccess={handleEditSuccess}
+              onCancel={handleEditCancel}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

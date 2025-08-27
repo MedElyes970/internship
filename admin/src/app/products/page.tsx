@@ -225,9 +225,25 @@ export default function ProductsPage() {
 
                 {/* Price and Stock */}
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-green-600">
-                    {formatPrice(product.price)}
-                  </span>
+                  <div className="flex flex-col">
+                    {product.hasDiscount && product.discountPercentage && product.discountPercentage > 0 ? (
+                      <>
+                        <span className="text-lg font-bold text-green-600">
+                          ${(product.discountedPrice || product.price).toFixed(2)}
+                        </span>
+                        <span className="text-sm text-muted-foreground line-through">
+                          ${product.price.toFixed(2)}
+                        </span>
+                        <Badge variant="destructive" className="text-xs w-fit">
+                          {product.discountPercentage}% OFF
+                        </Badge>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold text-green-600">
+                        {formatPrice(product.price)}
+                      </span>
+                    )}
+                  </div>
                   <Badge 
                     variant="secondary" 
                     className={`text-xs ${getStockStatusColor(product.stockStatus)}`}
@@ -308,6 +324,12 @@ export default function ProductsPage() {
                 {products.filter(p => p.category).length}
               </div>
               <div className="text-sm text-muted-foreground">With Category</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {products.filter(p => p.hasDiscount && p.discountPercentage && p.discountPercentage > 0).length}
+              </div>
+              <div className="text-sm text-muted-foreground">With Discount</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold">

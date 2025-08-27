@@ -56,6 +56,17 @@ export const getTodosByDate = async (dateKey: string): Promise<TodoItem[]> => {
   });
 };
 
+export const getTodos = async (): Promise<TodoItem[]> => {
+  const snapshot = await getDocs(collection(db, COLLECTION_NAME));
+  const items = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as TodoItem[];
+  // Sort client-side by createdAt descending (newest first)
+  return items.sort((a, b) => {
+    const ta = (a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0)).getTime();
+    const tb = (b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0)).getTime();
+    return tb - ta;
+  });
+};
+
 export const setTodoCompleted = async (id: string, completed: boolean): Promise<void> => {
   const ref = doc(db, COLLECTION_NAME, id);
   await updateDoc(ref, { completed, updatedAt: serverTimestamp() });

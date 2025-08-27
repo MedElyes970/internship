@@ -32,6 +32,12 @@ export interface Product {
   updatedAt?: any;
   specs?: Record<string, any>;
   salesCount?: number;
+  // Discount system fields
+  hasDiscount?: boolean;
+  discountPercentage?: number;
+  originalPrice?: number;
+  discountedPrice?: number;
+  discountEndDate?: any;
 }
 
 const COLLECTION_NAME = 'products';
@@ -104,6 +110,29 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
       }
     }
 
+    // Handle discount calculations
+    let discountData = {};
+    if (productData.hasDiscount && productData.discountPercentage && productData.discountPercentage > 0) {
+      const originalPrice = productData.price;
+      const discountedPrice = Math.round((originalPrice * (100 - productData.discountPercentage)) / 100 * 100) / 100;
+      
+      discountData = {
+        hasDiscount: true,
+        discountPercentage: productData.discountPercentage,
+        originalPrice: originalPrice,
+        discountedPrice: discountedPrice,
+        discountEndDate: productData.discountEndDate,
+      };
+    } else {
+      discountData = {
+        hasDiscount: false,
+        discountPercentage: 0,
+        originalPrice: productData.price,
+        discountedPrice: productData.price,
+        discountEndDate: null,
+      };
+    }
+
     // Determine reference (auto-increment if not provided)
     const referenceValue = productData.reference && productData.reference > 0
       ? productData.reference
@@ -111,6 +140,7 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
 
     const docRef = await addDoc(collection(db, COLLECTION_NAME), {
       ...productData,
+      ...discountData,
       reference: referenceValue,
       stockStatus,
       salesCount: 0,
@@ -401,6 +431,26 @@ export const getStockStatusText = (status: string | undefined) => {
     default:
       return 'Unknown';
   }
+};
+
+// Check if discount is still valid (not expired)
+export const isDiscountValid = (product: Product): boolean => {
+  if (!product.hasDiscount || !product.discountEndDate) {
+    return false;
+  }
+  
+  const now = new Date();
+  const endDate = product.discountEndDate.toDate ? product.discountEndDate.toDate() : new Date(product.discountEndDate);
+  
+  return now < endDate;
+};
+
+// Get current price (discounted if valid, original if not)
+export const getCurrentPrice = (product: Product): number => {
+  if (product.hasDiscount && isDiscountValid(product)) {
+    return product.discountedPrice || product.price;
+  }
+  return product.price;
 };
 
 // Get latest orders

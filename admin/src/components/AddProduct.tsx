@@ -60,6 +60,23 @@ const formSchema = z.object({
   images: z.array(z.string()).optional(),
   specs: z.record(z.any()).optional(),
   reference: z.number().int().positive().optional(),
+  // Discount fields
+  hasDiscount: z.boolean().optional(),
+  discountPercentage: z.number().min(0).max(100).optional(),
+  discountEndDate: z.date().optional(),
+  discountedPrice: z.number().optional(),
+}).refine((data) => {
+  // If discount is enabled, percentage and end date are required
+  if (data.hasDiscount) {
+    return data.discountPercentage !== undefined && 
+           data.discountPercentage > 0 && 
+           data.discountPercentage <= 100 &&
+           data.discountEndDate !== undefined;
+  }
+  return true;
+}, {
+  message: "Discount percentage and end date are required when discount is enabled",
+  path: ["discountPercentage"]
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -84,6 +101,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
   const [rivalUrl, setRivalUrl] = useState("");
   const [isScraping, setIsScraping] = useState(false);
   const [formattedPrice, setFormattedPrice] = useState<string>("");
+  // Discount state
+  const [hasDiscount, setHasDiscount] = useState(false);
+  const [discountPercentage, setDiscountPercentage] = useState<number>(0);
+  const [discountEndDate, setDiscountEndDate] = useState<Date | undefined>(undefined);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -99,6 +120,11 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       images: [],
       specs: {},
       reference: undefined,
+      // Discount defaults
+      hasDiscount: false,
+      discountPercentage: 0,
+      discountEndDate: undefined,
+      discountedPrice: undefined,
     },
   });
 
@@ -230,6 +256,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
         images: allImageUrls,
         specs: specs,
         reference: data.reference,
+        hasDiscount: data.hasDiscount,
+        discountPercentage: data.discountPercentage,
+        discountEndDate: data.discountEndDate,
+        discountedPrice: data.discountedPrice,
       });
 
       toast.success("Product added successfully!");
@@ -238,6 +268,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       setImageUrls([]);
       setSpecs({});
       setFormattedPrice("");
+      // Reset discount fields
+      setHasDiscount(false);
+      setDiscountPercentage(0);
+      setDiscountEndDate(undefined);
 
       // Call success callback if provided
       if (onSuccess) {
@@ -344,6 +378,20 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       setSelectedFiles((prev) => [...prev, file]);
     }
   };
+
+  // Calculate discounted price
+  const calculateDiscountedPrice = (originalPrice: number, percentage: number): number => {
+    return Math.round((originalPrice * (100 - percentage)) / 100 * 100) / 100;
+  };
+
+  // Update discount fields when price or percentage changes
+  useEffect(() => {
+    const price = form.getValues("price");
+    if (hasDiscount && price > 0 && discountPercentage > 0) {
+      const discounted = calculateDiscountedPrice(price, discountPercentage);
+      form.setValue("discountedPrice", discounted);
+    }
+  }, [hasDiscount, discountPercentage, form]);
 
   // Web scraping function to extract product information
   const scrapeProductInfo = async (url: string) => {
@@ -612,6 +660,123 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       </FormItem>
                     )}
                   />
+
+                  {/* Discount Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="hasDiscount"
+                        checked={hasDiscount}
+                        onCheckedChange={(checked) => {
+                          const isChecked = Boolean(checked);
+                          setHasDiscount(isChecked);
+                          form.setValue("hasDiscount", isChecked);
+                          
+                          if (!isChecked) {
+                            // Reset discount fields when disabled
+                            setDiscountPercentage(0);
+                            setDiscountEndDate(undefined);
+                            form.setValue("discountPercentage", 0);
+                            form.setValue("discountEndDate", undefined);
+                            form.setValue("discountedPrice", undefined);
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="hasDiscount"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Enable Discount
+                      </label>
+                    </div>
+
+                    {hasDiscount && (
+                      <div className="grid grid-cols-2 gap-4 pl-6 border-l-2 border-gray-200">
+                        <FormField
+                          control={form.control}
+                          name="discountPercentage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Discount Percentage (%)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  {...field}
+                                  value={discountPercentage || ""}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    setDiscountPercentage(value);
+                                    field.onChange(value);
+                                  }}
+                                  placeholder="0"
+                                  disabled={isSubmitting}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Enter discount percentage (0-100%).
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="discountEndDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Discount End Date</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="date"
+                                  {...field}
+                                  value={discountEndDate ? discountEndDate.toISOString().split('T')[0] : ""}
+                                  onChange={(e) => {
+                                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                                    setDiscountEndDate(date);
+                                    field.onChange(date);
+                                  }}
+                                  min={new Date().toISOString().split('T')[0]}
+                                  disabled={isSubmitting}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                When the discount expires.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    {/* Discount Preview */}
+                    {hasDiscount && discountPercentage > 0 && form.getValues("price") > 0 && (
+                      <div className="pl-6 border-l-2 border-gray-200">
+                        <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg">
+                          <div className="text-sm text-blue-800 dark:text-blue-200">
+                            <div className="flex justify-between items-center">
+                              <span>Original Price:</span>
+                              <span className="line-through">
+                                ${form.getValues("price").toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center font-semibold">
+                              <span>Discounted Price:</span>
+                              <span className="text-green-600">
+                                ${calculateDiscountedPrice(form.getValues("price"), discountPercentage).toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                              You save ${(form.getValues("price") - calculateDiscountedPrice(form.getValues("price"), discountPercentage)).toFixed(2)} ({discountPercentage}% off)
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Reference */}
@@ -1005,6 +1170,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       setSpecs({});
                       setSubmitStatus("idle");
                       setFormattedPrice("");
+                      // Reset discount fields
+                      setHasDiscount(false);
+                      setDiscountPercentage(0);
+                      setDiscountEndDate(undefined);
                     }}
                   >
                     Reset

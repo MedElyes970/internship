@@ -63,19 +63,18 @@ const formSchema = z.object({
   // Discount fields
   hasDiscount: z.boolean().optional(),
   discountPercentage: z.number().min(0).max(100).optional(),
-  discountEndDate: z.date().optional(),
+  discountEndDate: z.date().nullable().optional(),
   discountedPrice: z.number().optional(),
 }).refine((data) => {
-  // If discount is enabled, percentage and end date are required
+  // If discount is enabled, only percentage is required
   if (data.hasDiscount) {
     return data.discountPercentage !== undefined && 
            data.discountPercentage > 0 && 
-           data.discountPercentage <= 100 &&
-           data.discountEndDate !== undefined;
+           data.discountPercentage <= 100;
   }
   return true;
 }, {
-  message: "Discount percentage and end date are required when discount is enabled",
+  message: "Discount percentage is required when discount is enabled",
   path: ["discountPercentage"]
 });
 
@@ -133,7 +132,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     if (form.getValues("price") > 0) {
       const formatted = new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 2
+        maximumFractionDigits: 0
       }).format(form.getValues("price"));
       setFormattedPrice(formatted);
     }
@@ -258,7 +257,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
         reference: data.reference,
         hasDiscount: data.hasDiscount,
         discountPercentage: data.discountPercentage,
-        discountEndDate: data.discountEndDate,
+        discountEndDate: data.discountEndDate || null,
         discountedPrice: data.discountedPrice,
       });
 
@@ -272,6 +271,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       setHasDiscount(false);
       setDiscountPercentage(0);
       setDiscountEndDate(undefined);
+      form.setValue("hasDiscount", false);
+      form.setValue("discountPercentage", 0);
+      form.setValue("discountEndDate", undefined);
+      form.setValue("discountedPrice", undefined);
 
       // Call success callback if provided
       if (onSuccess) {
@@ -390,6 +393,20 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     if (hasDiscount && price > 0 && discountPercentage > 0) {
       const discounted = calculateDiscountedPrice(price, discountPercentage);
       form.setValue("discountedPrice", discounted);
+      
+      // Update the formatted price display to show the discounted price
+      const formatted = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(discounted);
+      setFormattedPrice(formatted);
+    } else if (hasDiscount && price > 0) {
+      // If discount is enabled but no percentage, show original price
+      const formatted = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(price);
+      setFormattedPrice(formatted);
     }
   }, [hasDiscount, discountPercentage, form]);
 
@@ -453,7 +470,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
           // Fallback: format the numeric price
           const formatted = new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 0,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 0
           }).format(scrapedData.price);
           setFormattedPrice(formatted);
         }
@@ -643,7 +660,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                               if (numericValue > 0) {
                                 const formatted = new Intl.NumberFormat('en-US', {
                                   minimumFractionDigits: 0,
-                                  maximumFractionDigits: 2
+                                  maximumFractionDigits: 0
                                 }).format(numericValue);
                                 setFormattedPrice(formatted);
                                 field.onChange(numericValue);
@@ -743,7 +760,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                                 />
                               </FormControl>
                               <FormDescription>
-                                When the discount expires.
+                                When the discount expires (optional).
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -760,17 +777,32 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                             <div className="flex justify-between items-center">
                               <span>Original Price:</span>
                               <span className="line-through">
-                                ${form.getValues("price").toFixed(2)}
+                                {new Intl.NumberFormat('en-US', {
+                                  style: 'currency',
+                                  currency: 'USD',
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0
+                                }).format(form.getValues("price"))}
                               </span>
                             </div>
                             <div className="flex justify-between items-center font-semibold">
                               <span>Discounted Price:</span>
                               <span className="text-green-600">
-                                ${calculateDiscountedPrice(form.getValues("price"), discountPercentage).toFixed(2)}
+                                {new Intl.NumberFormat('en-US', {
+                                  style: 'currency',
+                                  currency: 'USD',
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0
+                                }).format(calculateDiscountedPrice(form.getValues("price"), discountPercentage))}
                               </span>
                             </div>
                             <div className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                              You save ${(form.getValues("price") - calculateDiscountedPrice(form.getValues("price"), discountPercentage)).toFixed(2)} ({discountPercentage}% off)
+                              You save {new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: 'USD',
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0
+                              }).format(form.getValues("price") - calculateDiscountedPrice(form.getValues("price"), discountPercentage))} ({discountPercentage}% off)
                             </div>
                           </div>
                         </div>
@@ -1174,6 +1206,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       setHasDiscount(false);
                       setDiscountPercentage(0);
                       setDiscountEndDate(undefined);
+                      form.setValue("hasDiscount", false);
+                      form.setValue("discountPercentage", 0);
+                      form.setValue("discountEndDate", undefined);
+                      form.setValue("discountedPrice", undefined);
                     }}
                   >
                     Reset

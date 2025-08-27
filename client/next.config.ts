@@ -1,9 +1,10 @@
+// next.config.js
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
   images: {
-    domains: ["lh3.googleusercontent.com", "res.cloudinary.com"],
+    unoptimized: true, // disables optimization so <Image> works with any src
   },
 };
 

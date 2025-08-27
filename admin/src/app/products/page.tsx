@@ -89,6 +89,8 @@ export default function ProductsPage() {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(price);
   };
 
@@ -229,10 +231,20 @@ export default function ProductsPage() {
                     {product.hasDiscount && product.discountPercentage && product.discountPercentage > 0 ? (
                       <>
                         <span className="text-lg font-bold text-green-600">
-                          ${(product.discountedPrice || product.price).toFixed(2)}
+                          {new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          }).format(product.discountedPrice || product.price)}
                         </span>
                         <span className="text-sm text-muted-foreground line-through">
-                          ${product.price.toFixed(2)}
+                          {new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          }).format(product.price)}
                         </span>
                         <Badge variant="destructive" className="text-xs w-fit">
                           {product.discountPercentage}% OFF

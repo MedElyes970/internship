@@ -121,7 +121,7 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
         discountPercentage: productData.discountPercentage,
         originalPrice: originalPrice,
         discountedPrice: discountedPrice,
-        discountEndDate: productData.discountEndDate,
+        discountEndDate: productData.discountEndDate || null,
       };
     } else {
       discountData = {

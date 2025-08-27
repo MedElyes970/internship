@@ -13,7 +13,8 @@ import {
   increment,
   getDoc,
   setDoc,
-  runTransaction 
+  runTransaction, 
+  deleteField 
 } from 'firebase/firestore';
 
 export interface Product {
@@ -26,6 +27,7 @@ export interface Product {
   subcategory?: string;
   brand?: string;
   images?: string[];
+  unlimited?: boolean;
   stock?: number;
   stockStatus?: 'in-stock' | 'sur-commande' | 'out-of-stock';
   createdAt?: any;
@@ -94,20 +96,25 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
       throw new Error('Description must be less than 1000 characters');
     }
 
-    if (productData.stock !== undefined && productData.stock < 0) {
+    if (!productData.unlimited && productData.stock !== undefined && productData.stock < 0) {
       throw new Error('Stock cannot be negative');
     }
 
     // Set default stock status based on stock if not provided
     let stockStatus = productData.stockStatus;
-    if (!stockStatus && productData.stock !== undefined) {
-      if (productData.stock === 0) {
-        stockStatus = 'out-of-stock';
-      } else if (productData.stock <= 10) {
-        stockStatus = 'sur-commande';
-      } else {
-        stockStatus = 'in-stock';
+    if (!productData.unlimited) {
+      if (!stockStatus && productData.stock !== undefined) {
+        if (productData.stock === 0) {
+          stockStatus = 'out-of-stock';
+        } else if (productData.stock <= 10) {
+          stockStatus = 'sur-commande';
+        } else {
+          stockStatus = 'in-stock';
+        }
       }
+    } else {
+      // For unlimited products, ignore stock and status
+      stockStatus = 'in-stock';
     }
 
     // Handle discount calculations
@@ -138,19 +145,27 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
       ? productData.reference
       : await getNextProductReference();
 
-    const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-      ...productData,
+    // Build document without undefined fields
+    const { stock: incomingStock, ...productDataWithoutStock } = productData as any;
+    const docData: any = {
+      ...productDataWithoutStock,
+      unlimited: Boolean(productData.unlimited),
       ...discountData,
       reference: referenceValue,
       stockStatus,
       salesCount: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    };
+    if (!productData.unlimited && typeof incomingStock === 'number') {
+      docData.stock = incomingStock;
+    }
+    const docRef = await addDoc(collection(db, COLLECTION_NAME), docData);
     
     return {
       id: docRef.id,
       ...productData,
+      unlimited: Boolean(productData.unlimited),
       ...discountData,
       reference: referenceValue,
       stockStatus,
@@ -241,19 +256,26 @@ export const updateProduct = async (id: string, updates: Partial<Product>) => {
       throw new Error('Price must be greater than 0');
     }
 
-    if (updates.stock !== undefined && updates.stock < 0) {
+    if (!updates.unlimited && updates.stock !== undefined && updates.stock < 0) {
       throw new Error('Stock cannot be negative');
     }
 
     // Update stock status if stock is being updated and no manual status provided
-    if (updates.stock !== undefined && !updates.stockStatus) {
-      if (updates.stock === 0) {
-        updates.stockStatus = 'out-of-stock';
-      } else if (updates.stock <= 10) {
-        updates.stockStatus = 'sur-commande';
-      } else {
-        updates.stockStatus = 'in-stock';
+    if (!updates.unlimited) {
+      if (updates.stock !== undefined && !updates.stockStatus) {
+        if (updates.stock === 0) {
+          updates.stockStatus = 'out-of-stock';
+        } else if (updates.stock <= 10) {
+          updates.stockStatus = 'sur-commande';
+        } else {
+          updates.stockStatus = 'in-stock';
+        }
       }
+    } else {
+      // If setting to unlimited, remove stock and set status to in-stock by default
+      // Use deleteField to remove stock
+      (updates as any).stock = deleteField();
+      updates.stockStatus = 'in-stock';
     }
 
     const productRef = doc(db, COLLECTION_NAME, id);
@@ -261,10 +283,18 @@ export const updateProduct = async (id: string, updates: Partial<Product>) => {
     // Ensure backend-managed fields cannot be modified here
     const { salesCount: _ignoredSalesCount, createdAt: _ignoreCreatedAt, ...safeUpdates } = updates as any;
 
-    await updateDoc(productRef, {
+    // Prevent sending undefined values by constructing payload explicitly
+    const payload: any = {
       ...safeUpdates,
+      unlimited: Boolean((updates as any).unlimited),
       updatedAt: serverTimestamp(),
-    });
+    };
+    if ((updates as any).stock === deleteField()) {
+      payload.stock = deleteField();
+    } else if (safeUpdates.stock === undefined) {
+      delete payload.stock;
+    }
+    await updateDoc(productRef, payload);
     
     return { id, ...updates };
   } catch (error) {

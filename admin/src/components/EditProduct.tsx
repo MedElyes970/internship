@@ -54,6 +54,7 @@ const formSchema = z.object({
   category: z.string().optional(),
   subcategory: z.string().min(1, { message: "Subcategory is required" }),
   brand: z.string().optional(),
+  unlimited: z.boolean().optional(),
   stock: z.number().min(0, { message: "Stock cannot be negative" }).optional(),
   stockStatus: z.enum(["in-stock", "sur-commande", "out-of-stock"]).optional(),
   images: z.array(z.string()).optional(),
@@ -112,7 +113,8 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
       category: product.category || "",
       subcategory: product.subcategory || "",
       brand: product.brand || "",
-      stock: product.stock || 0,
+      unlimited: Boolean((product as any).unlimited),
+      stock: (product as any).unlimited ? 0 : (product.stock || 0),
       stockStatus: product.stockStatus || "in-stock",
       images: product.images || [],
       specs: product.specs || {},
@@ -192,8 +194,9 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
         category: data.category || "",
         subcategory: data.subcategory,
         brand: data.brand?.trim() || "",
-        stock: data.stock || 0,
-        stockStatus: data.stockStatus,
+        unlimited: Boolean(data.unlimited),
+        stock: data.unlimited ? undefined : (data.stock || 0),
+        stockStatus: data.unlimited ? "in-stock" : data.stockStatus,
         images: allImageUrls,
         specs: specs,
         reference: data.reference,
@@ -882,6 +885,29 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
                   <h3 className="text-lg font-semibold">Stock Management</h3>
 
                   <div className="grid grid-cols-2 gap-4">
+                    {/* Unlimited Checkbox */}
+                    <div className="col-span-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="unlimited"
+                          checked={form.watch("unlimited")}
+                          onCheckedChange={(checked) => {
+                            const isChecked = Boolean(checked);
+                            form.setValue("unlimited", isChecked);
+                            if (isChecked) {
+                              form.setValue("stock", 0);
+                              form.setValue("stockStatus", "in-stock");
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="unlimited"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          Unlimited stock (ignore stock tracking)
+                        </label>
+                      </div>
+                    </div>
                     <FormField
                       control={form.control}
                       name="stock"
@@ -897,7 +923,7 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
                                 field.onChange(parseInt(e.target.value) || 0)
                               }
                               placeholder="0"
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || form.watch("unlimited")}
                             />
                           </FormControl>
                           <FormDescription>

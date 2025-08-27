@@ -97,6 +97,7 @@ const mapDocToProduct = (snap: any): ProductType => {
     price: typeof data.price === "number" ? data.price : Number(data.price ?? 0),
     images: data.images ?? {},
     salesCount: typeof data.salesCount === "number" ? data.salesCount : 0,
+    unlimited: Boolean(data.unlimited),
     stock: typeof data.stock === "number" ? data.stock : undefined,
     // Map discount fields
     hasDiscount: data.hasDiscount ?? false,
@@ -226,8 +227,8 @@ export const updateProductAfterOrder = async (productId: string, quantity: numbe
       updatedAt: new Date(),
     };
     
-    // Only update stock if it exists and is a number
-    if (typeof productData.stock === 'number') {
+    // Only update stock if NOT unlimited and stock exists as a number
+    if (!productData.unlimited && typeof productData.stock === 'number') {
       const newStock = productData.stock - quantity;
       if (newStock < 0) {
         throw new Error(`Insufficient stock for product ${productData.name}. Available: ${productData.stock}, Requested: ${quantity}`);
@@ -235,7 +236,7 @@ export const updateProductAfterOrder = async (productId: string, quantity: numbe
       updates.stock = newStock;
       console.log(`Stock updated: ${productData.stock} → ${newStock}`);
     } else {
-      console.log(`No stock field found for product ${productData.name}, skipping stock update`);
+      console.log(`Unlimited or no stock field for product ${productData.name}, skipping stock update`);
     }
     
     console.log(`Sales count updated: ${productData.salesCount || 0} → ${(productData.salesCount || 0) + quantity}`);
@@ -283,8 +284,8 @@ export const checkProductStock = async (productId: string, requestedQuantity: nu
     
     const productData = productSnap.data();
     
-    // If no stock field, assume unlimited stock
-    if (productData.stock === undefined) {
+    // If unlimited or no stock field, assume unlimited stock
+    if (productData.unlimited || productData.stock === undefined) {
       return { hasStock: true };
     }
     

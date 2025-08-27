@@ -8,6 +8,7 @@ export type ProductType = {
   price: number;
   images: Record<string, string>;
   salesCount?: number;
+  unlimited?: boolean;
   stock?: number;
   // Discount fields
   hasDiscount?: boolean;

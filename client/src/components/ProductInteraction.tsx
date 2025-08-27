@@ -23,7 +23,7 @@ const ProductInteraction = ({
   const handleQuantityChange = (type: "increment" | "decrement") => {
     if (type === "increment") {
       // Check stock limit if stock exists
-      if (product.stock !== undefined && quantity >= product.stock) {
+      if (!product.unlimited && product.stock !== undefined && quantity >= product.stock) {
         return; // Don't increment beyond available stock
       }
       setQuantity((prev) => prev + 1);
@@ -36,7 +36,7 @@ const ProductInteraction = ({
 
   const handleAddToCart = () => {
     // Check if there's sufficient stock
-    if (product.stock !== undefined && quantity > product.stock) {
+    if (!product.unlimited && product.stock !== undefined && quantity > product.stock) {
       toast.error(`Only ${product.stock} items available in stock`);
       return;
     }
@@ -49,8 +49,8 @@ const ProductInteraction = ({
   };
   
   // Check if product is out of stock
-  const isOutOfStock = product.stock !== undefined && product.stock === 0;
-  const hasLimitedStock = product.stock !== undefined && product.stock > 0 && product.stock <= 10;
+  const isOutOfStock = !product.unlimited && product.stock !== undefined && product.stock === 0;
+  const hasLimitedStock = !product.unlimited && product.stock !== undefined && product.stock > 0 && product.stock <= 10;
   
   return (
     <div className="flex flex-col gap-4 mt-4">
@@ -70,7 +70,7 @@ const ProductInteraction = ({
       )}
       
       {/* STOCK STATUS */}
-      {product.stock !== undefined && (
+      {(!product.unlimited && product.stock !== undefined) && (
         <div className="text-sm">
           {isOutOfStock ? (
             <span className="text-red-600 font-medium">Out of Stock</span>
@@ -97,7 +97,7 @@ const ProductInteraction = ({
           <button
             className="cursor-pointer border-1 border-gray-300 p-1"
             onClick={() => handleQuantityChange("increment")}
-            disabled={product.stock !== undefined && quantity >= product.stock}
+            disabled={!product.unlimited && product.stock !== undefined && quantity >= product.stock}
           >
             <Plus className="w-4 h-4" />
           </button>

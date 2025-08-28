@@ -40,6 +40,8 @@ export interface Product {
   originalPrice?: number;
   discountedPrice?: number;
   discountEndDate?: any;
+  // Video URL for surveillance cameras
+  videoUrl?: string;
 }
 
 const COLLECTION_NAME = 'products';

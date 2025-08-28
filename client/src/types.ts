@@ -17,6 +17,8 @@ export type ProductType = {
   originalPrice?: number;
   discountedPrice?: number;
   discountEndDate?: any;
+  // Video URL for surveillance cameras
+  videoUrl?: string;
 };
 
 export type ProductsType = ProductType[];

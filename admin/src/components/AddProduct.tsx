@@ -66,6 +66,8 @@ const formSchema = z.object({
   discountPercentage: z.number().min(0).max(100).optional(),
   discountEndDate: z.date().nullable().optional(),
   discountedPrice: z.number().optional(),
+  // Video URL for surveillance cameras
+  videoUrl: z.string().url({ message: "Please enter a valid URL" }).optional(),
 }).refine((data) => {
   // If discount is enabled, only percentage is required
   if (data.hasDiscount) {
@@ -126,6 +128,8 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       discountPercentage: 0,
       discountEndDate: undefined,
       discountedPrice: undefined,
+      // Video URL
+      videoUrl: "",
     },
   });
 
@@ -270,6 +274,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
         discountPercentage: data.discountPercentage,
         discountEndDate: data.discountEndDate || null,
         discountedPrice: data.discountedPrice,
+        videoUrl: data.videoUrl?.trim() || undefined,
       });
 
       toast.success("Product added successfully!");
@@ -970,6 +975,31 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       </FormItem>
                     )}
                   />
+
+                  {/* Video URL for surveillance cameras */}
+                  {form.watch("category") === "VidéoSurveillance" && 
+                   form.watch("subcategory") === "Caméra de Surveillance" && (
+                    <FormField
+                      control={form.control}
+                      name="videoUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Video URL</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="https://example.com/video.mp4"
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Provide a video URL to demonstrate the camera's quality and features.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
 
                 {/* Stock Management */}
@@ -1254,6 +1284,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       form.setValue("discountPercentage", 0);
                       form.setValue("discountEndDate", undefined);
                       form.setValue("discountedPrice", undefined);
+                      form.setValue("videoUrl", "");
                     }}
                   >
                     Reset

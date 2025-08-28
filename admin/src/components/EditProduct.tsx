@@ -64,6 +64,8 @@ const formSchema = z.object({
   discountPercentage: z.number().min(0).max(100).optional(),
   discountEndDate: z.date().nullable().optional(),
   discountedPrice: z.number().optional(),
+  // Video URL for surveillance cameras
+  videoUrl: z.string().url({ message: "Please enter a valid URL" }).optional(),
 }).refine((data) => {
   if (data.hasDiscount) {
     return data.discountPercentage !== undefined && 
@@ -123,6 +125,7 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
       discountPercentage: product.discountPercentage || 0,
       discountEndDate: product.discountEndDate ? new Date(product.discountEndDate) : undefined,
       discountedPrice: product.discountedPrice,
+      videoUrl: product.videoUrl || "",
     },
   });
 
@@ -204,6 +207,7 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
         discountPercentage: data.discountPercentage,
         discountEndDate: data.discountEndDate || null,
         discountedPrice: data.discountedPrice,
+        videoUrl: data.videoUrl?.trim() || undefined,
       });
 
       toast.success("Product updated successfully!");
@@ -889,6 +893,31 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
                       </FormItem>
                     )}
                   />
+
+                  {/* Video URL for surveillance cameras */}
+                  {form.watch("category") === "VidéoSurveillance" && 
+                   form.watch("subcategory") === "Caméra de Surveillance" && (
+                    <FormField
+                      control={form.control}
+                      name="videoUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Video URL</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="https://example.com/video.mp4"
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Provide a video URL to demonstrate the camera's quality and features.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
 
                 {/* Stock Management */}

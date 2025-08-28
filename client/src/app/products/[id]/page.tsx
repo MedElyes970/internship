@@ -44,6 +44,26 @@ const ProductPage = async ({
         <h1 className="text-2xl font-medium">{product.name}</h1>
         <p className="text-gray-500">{product.description}</p>
         
+        {/* VIDEO SECTION */}
+        {product.videoUrl && (
+          <div className="flex flex-col gap-2">
+            <h3 className="text-lg font-medium">Product Video</h3>
+            <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+              <video
+                src={product.videoUrl}
+                controls
+                className="w-full h-full object-cover"
+                poster={product.images?.main || product.images?.thumbnail || ""}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+            <p className="text-sm text-gray-500">
+              Watch this video to see the product in action and assess its quality.
+            </p>
+          </div>
+        )}
+        
         {/* PRICE SECTION */}
         <div className="flex flex-col gap-2">
           {hasValidDiscount ? (

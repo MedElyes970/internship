@@ -34,7 +34,7 @@ import { getCurrentPrice, isDiscountValid, Product } from "@/lib/products";
 import { X } from "lucide-react";
 
 const orderItemSchema = z.object({
-  productReference: z.number().int().positive({ message: "Reference must be positive!" }),
+  productReference: z.union([z.string().min(1, { message: "Reference cannot be empty" }), z.number().int().positive({ message: "Reference must be positive!" })]),
   quantity: z.number().int().min(1, { message: "Quantity must be at least 1!" }),
 });
 
@@ -48,7 +48,7 @@ const AddOrder = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      items: [{ productReference: 0, quantity: 1 }],
+      items: [{ productReference: "", quantity: 1 }],
       userEmail: "",
       status: "pending",
     },
@@ -113,7 +113,7 @@ const AddOrder = () => {
       await addDoc(collection(db, "orders"), orderPayload);
 
       toast.success(`Order #${orderNumber} created`);
-      form.reset({ items: [{ productReference: 0, quantity: 1 }], userEmail: "", status: "pending" });
+      form.reset({ items: [{ productReference: "", quantity: 1 }], userEmail: "", status: "pending" });
     } catch (e: any) {
       console.error("Failed to create order:", e);
       toast.error(e?.message || "Failed to create order");
@@ -139,11 +139,24 @@ const AddOrder = () => {
                             <FormLabel>Product Reference</FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
-                                min="1"
+                                type="text"
                                 {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                placeholder="Enter product reference"
+                                value={field.value || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value.trim();
+                                  if (value === "") {
+                                    field.onChange("");
+                                  } else {
+                                    // Try to parse as number first, otherwise keep as string
+                                    const numValue = parseInt(value);
+                                    if (!isNaN(numValue) && numValue > 0) {
+                                      field.onChange(numValue);
+                                    } else {
+                                      field.onChange(value);
+                                    }
+                                  }
+                                }}
+                                placeholder="Enter product reference (e.g., F552-5MP, 12345)"
                               />
                             </FormControl>
                             <FormMessage />
@@ -189,7 +202,7 @@ const AddOrder = () => {
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => append({ productReference: 0, quantity: 1 })}
+                  onClick={() => append({ productReference: "", quantity: 1 })}
                 >
                   Add Product
                 </Button>

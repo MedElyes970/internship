@@ -60,7 +60,7 @@ const formSchema = z.object({
   stockStatus: z.enum(["in-stock", "sur-commande", "out-of-stock"]).optional(),
   images: z.array(z.string()).optional(),
   specs: z.record(z.any()).optional(),
-  reference: z.number().int().positive().optional(),
+  reference: z.union([z.string().min(1, { message: "Reference cannot be empty" }), z.number().int().positive()]).optional(),
   // Discount fields
   hasDiscount: z.boolean().optional(),
   discountPercentage: z.number().min(0).max(100).optional(),
@@ -833,20 +833,29 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                         <FormLabel>Reference (Optional)</FormLabel>
                         <FormControl>
                           <Input
-                            type="number"
-                            min="1"
+                            type="text"
                             {...field}
-                            onChange={(e) =>
-                              field.onChange(
-                                parseInt(e.target.value) || undefined
-                              )
-                            }
-                            placeholder="Auto-assigned if left empty"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const value = e.target.value.trim();
+                              if (value === "") {
+                                field.onChange(undefined);
+                              } else {
+                                // Try to parse as number first, otherwise keep as string
+                                const numValue = parseInt(value);
+                                if (!isNaN(numValue) && numValue > 0) {
+                                  field.onChange(numValue);
+                                } else {
+                                  field.onChange(value);
+                                }
+                              }
+                            }}
+                            placeholder="Auto-assigned if left empty (e.g., F552-5MP, 12345)"
                             disabled={isSubmitting}
                           />
                         </FormControl>
                         <FormDescription>
-                          Leave empty to auto-assign the next reference number.
+                          Enter a custom reference (e.g., F552-5MP) or leave empty to auto-assign the next numeric reference.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

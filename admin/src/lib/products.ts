@@ -19,7 +19,7 @@ import {
 
 export interface Product {
   id?: string;
-  reference?: number;
+  reference?: string | number; // Changed from number to string | number
   name: string;
   description?: string;
   price: number;
@@ -140,10 +140,15 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
       };
     }
 
-    // Determine reference (auto-increment if not provided)
-    const referenceValue = productData.reference && productData.reference > 0
-      ? productData.reference
-      : await getNextProductReference();
+    // Determine reference (auto-increment if not provided, or use provided string/number)
+    let referenceValue: string | number;
+    if (productData.reference !== undefined && productData.reference !== null && productData.reference !== '') {
+      // Use provided reference (string or number)
+      referenceValue = productData.reference;
+    } else {
+      // Auto-increment numeric reference
+      referenceValue = await getNextProductReference();
+    }
 
     // Build document without undefined fields
     const { stock: incomingStock, ...productDataWithoutStock } = productData as any;

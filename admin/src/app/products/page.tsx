@@ -297,6 +297,13 @@ export default function ProductsPage() {
                   )}
                 </div>
 
+                {/* Reference */}
+                {product.reference && (
+                  <div className="text-xs text-muted-foreground">
+                    Ref: {product.reference}
+                  </div>
+                )}
+
                 {/* Stock Quantity */}
                 {product.stock !== undefined && (
                   <div className="text-sm text-muted-foreground">

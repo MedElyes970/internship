@@ -154,8 +154,14 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' |
 
     // Build document without undefined fields
     const { stock: incomingStock, ...productDataWithoutStock } = productData as any;
+    
+    // Filter out undefined values from productDataWithoutStock
+    const filteredProductData = Object.fromEntries(
+      Object.entries(productDataWithoutStock).filter(([_, value]) => value !== undefined)
+    );
+    
     const docData: any = {
-      ...productDataWithoutStock,
+      ...filteredProductData,
       unlimited: Boolean(productData.unlimited),
       ...discountData,
       reference: referenceValue,
@@ -290,9 +296,14 @@ export const updateProduct = async (id: string, updates: Partial<Product>) => {
     // Ensure backend-managed fields cannot be modified here
     const { salesCount: _ignoredSalesCount, createdAt: _ignoreCreatedAt, ...safeUpdates } = updates as any;
 
+    // Filter out undefined values from safeUpdates
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(safeUpdates).filter(([_, value]) => value !== undefined)
+    );
+
     // Prevent sending undefined values by constructing payload explicitly
     const payload: any = {
-      ...safeUpdates,
+      ...filteredUpdates,
       unlimited: Boolean((updates as any).unlimited),
       updatedAt: serverTimestamp(),
     };

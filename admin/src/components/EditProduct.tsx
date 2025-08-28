@@ -65,7 +65,15 @@ const formSchema = z.object({
   discountEndDate: z.date().nullable().optional(),
   discountedPrice: z.number().optional(),
   // Video URL for surveillance cameras
-  videoUrl: z.string().url({ message: "Please enter a valid URL" }).optional(),
+  videoUrl: z.string().optional().refine((val) => {
+    if (!val) return true; // Empty is valid since it's optional
+    try {
+      new URL(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, { message: "Please enter a valid URL" }),
 }).refine((data) => {
   if (data.hasDiscount) {
     return data.discountPercentage !== undefined && 
@@ -358,18 +366,6 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
     if (hasDiscount && price > 0 && discountPercentage > 0) {
       const discounted = calculateDiscountedPrice(price, discountPercentage);
       form.setValue("discountedPrice", discounted);
-      
-             const formatted = new Intl.NumberFormat('ar-TN', {
-         minimumFractionDigits: 0,
-         maximumFractionDigits: 0
-       }).format(discounted / 1000);
-      setFormattedPrice(formatted);
-    } else if (hasDiscount && price > 0) {
-             const formatted = new Intl.NumberFormat('ar-TN', {
-         minimumFractionDigits: 0,
-         maximumFractionDigits: 0
-       }).format(price / 1000);
-      setFormattedPrice(formatted);
     }
   }, [hasDiscount, discountPercentage, form]);
 
@@ -582,47 +578,76 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Price *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            {...field}
-                            value={formattedPrice || field.value || ""}
-                            onChange={(e) => {
-                              const cleanValue = e.target.value.replace(/[^\d.]/g, '');
-                              const numericValue = parseFloat(cleanValue) || 0;
-                              // Store price in millimes (multiply by 1000)
-                              field.onChange(numericValue * 1000);
-                              setFormattedPrice(cleanValue);
-                            }}
-                            onBlur={(e) => {
-                              const numericValue = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
-                              if (numericValue > 0) {
-                                const formatted = new Intl.NumberFormat('ar-TN', {
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0
-                                }).format(numericValue);
-                                setFormattedPrice(formatted);
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Original Price *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              {...field}
+                              value={formattedPrice || field.value || ""}
+                              onChange={(e) => {
+                                const cleanValue = e.target.value.replace(/[^\d.]/g, '');
+                                const numericValue = parseFloat(cleanValue) || 0;
                                 // Store price in millimes (multiply by 1000)
                                 field.onChange(numericValue * 1000);
-                              }
-                            }}
-                            placeholder="0.00"
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Enter the price of the product in Tunisian Dinars (DT).
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                                setFormattedPrice(cleanValue);
+                              }}
+                              onBlur={(e) => {
+                                const numericValue = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
+                                if (numericValue > 0) {
+                                  const formatted = new Intl.NumberFormat('ar-TN', {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                  }).format(numericValue);
+                                  setFormattedPrice(formatted);
+                                  // Store price in millimes (multiply by 1000)
+                                  field.onChange(numericValue * 1000);
+                                }
+                              }}
+                              placeholder="0.00"
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Enter the original price in Tunisian Dinars (DT).
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormItem>
+                      <FormLabel>Final Price</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          value={
+                            hasDiscount && discountPercentage > 0 && form.getValues("price") > 0
+                              ? new Intl.NumberFormat('ar-TN', {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0
+                                }).format(calculateDiscountedPrice(form.getValues("price"), discountPercentage) / 1000)
+                              : form.getValues("price") > 0
+                              ? new Intl.NumberFormat('ar-TN', {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0
+                                }).format(form.getValues("price") / 1000)
+                              : "0"
+                          }
+                          readOnly
+                          className="bg-gray-50 dark:bg-gray-800"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Final price customers will pay (read-only).
+                      </FormDescription>
+                    </FormItem>
+                  </div>
 
                   {/* Discount Section */}
                   <div className="space-y-4">
@@ -714,45 +739,7 @@ const EditProduct = ({ product, onSuccess, onCancel }: EditProductProps) => {
                       </div>
                     )}
 
-                    {/* Discount Preview */}
-                    {hasDiscount && discountPercentage > 0 && form.getValues("price") > 0 && (
-                      <div className="pl-6 border-l-2 border-gray-200">
-                        <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg">
-                          <div className="text-sm text-blue-800 dark:text-blue-200">
-                            <div className="flex justify-between items-center">
-                              <span>Original Price:</span>
-                              <span className="line-through">
-                                {new Intl.NumberFormat('ar-TN', {
-                                  style: 'currency',
-                                  currency: 'TND',
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0
-                                }).format(form.getValues("price") / 1000)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center font-semibold">
-                              <span>Discounted Price:</span>
-                              <span className="text-green-600">
-                                {new Intl.NumberFormat('ar-TN', {
-                                  style: 'currency',
-                                  currency: 'TND',
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0
-                                }).format(calculateDiscountedPrice(form.getValues("price"), discountPercentage) / 1000)}
-                              </span>
-                            </div>
-                            <div className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                              You save {new Intl.NumberFormat('ar-TN', {
-                                style: 'currency',
-                                currency: 'TND',
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0
-                              }).format((form.getValues("price") - calculateDiscountedPrice(form.getValues("price"), discountPercentage)) / 1000)} ({discountPercentage}% off)
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 </div>
 

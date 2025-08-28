@@ -11,6 +11,12 @@ export type ProductType = {
   salesCount?: number;
   unlimited?: boolean;
   stock?: number;
+  // Additional fields
+  category?: string;
+  subcategory?: string;
+  brand?: string;
+  specs?: Record<string, any>;
+  stockStatus?: 'in-stock' | 'sur-commande' | 'out-of-stock';
   // Discount fields
   hasDiscount?: boolean;
   discountPercentage?: number;

@@ -90,6 +90,7 @@ const mapDocToProduct = (snap: any): ProductType => {
     discount_price: data.discount_price,
     discount_percentage: data.discount_percentage
   });
+  console.log('Video URL found:', data.videoUrl);
   
   const mappedProduct = {
     id: snap.id,
@@ -97,19 +98,34 @@ const mapDocToProduct = (snap: any): ProductType => {
     shortDescription: data.shortDescription ?? "",
     description: data.description ?? "",
     price: typeof data.price === "number" ? data.price : Number(data.price ?? 0),
-    images: data.images ?? {},
+    images: Array.isArray(data.images) 
+      ? data.images.reduce((acc, url, index) => {
+          acc[`image_${index}`] = url;
+          return acc;
+        }, {} as Record<string, string>)
+      : data.images ?? {},
     salesCount: typeof data.salesCount === "number" ? data.salesCount : 0,
     unlimited: Boolean(data.unlimited),
     stock: typeof data.stock === "number" ? data.stock : undefined,
+    // Map additional fields
+    reference: data.reference,
+    category: data.category,
+    subcategory: data.subcategory,
+    brand: data.brand,
+    specs: data.specs,
+    stockStatus: data.stockStatus,
     // Map discount fields
     hasDiscount: data.hasDiscount ?? false,
     discountPercentage: typeof data.discountPercentage === "number" ? data.discountPercentage : undefined,
     originalPrice: typeof data.originalPrice === "number" ? data.originalPrice : undefined,
     discountedPrice: typeof data.discountedPrice === "number" ? data.discountedPrice : undefined,
     discountEndDate: data.discountEndDate || undefined,
+    // Map video URL
+    videoUrl: data.videoUrl || undefined,
   };
   
   console.log('Mapped product:', mappedProduct);
+  console.log('Video URL in mapped product:', mappedProduct.videoUrl);
   return mappedProduct;
 };
 

@@ -42,52 +42,83 @@ import {
   Category,
   Subcategory,
 } from "@/lib/categories";
-import { Loader2, CheckCircle, AlertCircle, Plus, X, Globe, Search } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Plus,
+  X,
+  Globe,
+  Search,
+} from "lucide-react";
 import { toast } from "sonner";
 
-const formSchema = z.object({
-  name: z
-    .string()
-    .min(1, { message: "Product name is required!" })
-    .max(100, { message: "Name must be less than 100 characters" }),
-  description: z.string().optional(),
-  price: z.number().min(0.01, { message: "Price must be greater than 0" }),
-  category: z.string().optional(),
-  subcategory: z.string().min(1, { message: "Subcategory is required" }),
-  brand: z.string().optional(),
-  unlimited: z.boolean().optional(),
-  stock: z.number().min(0, { message: "Stock cannot be negative" }).optional(),
-  stockStatus: z.enum(["in-stock", "sur-commande", "out-of-stock"]).optional(),
-  images: z.array(z.string()).optional(),
-  specs: z.record(z.any()).optional(),
-  reference: z.union([z.string().min(1, { message: "Reference cannot be empty" }), z.number().int().positive()]).optional(),
-  // Discount fields
-  hasDiscount: z.boolean().optional(),
-  discountPercentage: z.number().min(0).max(100).optional(),
-  discountEndDate: z.date().nullable().optional(),
-  discountedPrice: z.number().optional(),
-  // Video URL for surveillance cameras
-  videoUrl: z.string().optional().refine((val) => {
-    if (!val) return true; // Empty is valid since it's optional
-    try {
-      new URL(val);
+const formSchema = z
+  .object({
+    name: z
+      .string()
+      .min(1, { message: "Product name is required!" })
+      .max(100, { message: "Name must be less than 100 characters" }),
+    description: z.string().optional(),
+    price: z.number().min(0.01, { message: "Price must be greater than 0" }),
+    category: z.string().optional(),
+    subcategory: z.string().min(1, { message: "Subcategory is required" }),
+    brand: z.string().optional(),
+    unlimited: z.boolean().optional(),
+    stock: z
+      .number()
+      .min(0, { message: "Stock cannot be negative" })
+      .optional(),
+    stockStatus: z
+      .enum(["in-stock", "sur-commande", "out-of-stock"])
+      .optional(),
+    images: z.array(z.string()).optional(),
+    specs: z.record(z.any()).optional(),
+    reference: z
+      .union([
+        z.string().min(1, { message: "Reference cannot be empty" }),
+        z.number().int().positive(),
+      ])
+      .optional(),
+    // Discount fields
+    hasDiscount: z.boolean().optional(),
+    discountPercentage: z.number().min(0).max(100).optional(),
+    discountEndDate: z.date().nullable().optional(),
+    discountedPrice: z.number().optional(),
+    // Video URL for surveillance cameras
+    videoUrl: z
+      .string()
+      .optional()
+      .refine(
+        (val) => {
+          if (!val) return true; // Empty is valid since it's optional
+          try {
+            new URL(val);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { message: "Please enter a valid URL" }
+      ),
+  })
+  .refine(
+    (data) => {
+      // If discount is enabled, only percentage is required
+      if (data.hasDiscount) {
+        return (
+          data.discountPercentage !== undefined &&
+          data.discountPercentage > 0 &&
+          data.discountPercentage <= 100
+        );
+      }
       return true;
-    } catch {
-      return false;
+    },
+    {
+      message: "Discount percentage is required when discount is enabled",
+      path: ["discountPercentage"],
     }
-  }, { message: "Please enter a valid URL" }),
-}).refine((data) => {
-  // If discount is enabled, only percentage is required
-  if (data.hasDiscount) {
-    return data.discountPercentage !== undefined && 
-           data.discountPercentage > 0 && 
-           data.discountPercentage <= 100;
-  }
-  return true;
-}, {
-  message: "Discount percentage is required when discount is enabled",
-  path: ["discountPercentage"]
-});
+  );
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -114,7 +145,9 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
   // Discount state
   const [hasDiscount, setHasDiscount] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
-  const [discountEndDate, setDiscountEndDate] = useState<Date | undefined>(undefined);
+  const [discountEndDate, setDiscountEndDate] = useState<Date | undefined>(
+    undefined
+  );
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -125,7 +158,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       category: "",
       subcategory: "",
       brand: "",
-      unlimited: false,
+      unlimited: true,
       stock: 0,
       stockStatus: "in-stock",
       images: [],
@@ -144,10 +177,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
   // Initialize formatted price when form loads
   useEffect(() => {
     if (form.getValues("price") > 0) {
-             const formatted = new Intl.NumberFormat('ar-TN', {
-         minimumFractionDigits: 0,
-         maximumFractionDigits: 0
-       }).format(form.getValues("price") / 1000);
+      const formatted = new Intl.NumberFormat("ar-TN", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(form.getValues("price") / 1000);
       setFormattedPrice(formatted);
     }
   }, [form]);
@@ -247,11 +280,11 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     setSubmitStatus("idle");
 
     // Debug form data
-    console.log('Form submission data:', data);
-    console.log('Local discount state:', {
+    console.log("Form submission data:", data);
+    console.log("Local discount state:", {
       hasDiscount,
       discountPercentage,
-      discountEndDate
+      discountEndDate,
     });
 
     try {
@@ -273,7 +306,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
         subcategory: data.subcategory,
         brand: data.brand?.trim() || "",
         unlimited: Boolean(data.unlimited),
-        stock: data.unlimited ? undefined : (data.stock || 0),
+        stock: data.unlimited ? undefined : data.stock || 0,
         stockStatus: data.unlimited ? "in-stock" : data.stockStatus,
         images: allImageUrls,
         specs: specs,
@@ -407,8 +440,11 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
   };
 
   // Calculate discounted price
-  const calculateDiscountedPrice = (originalPrice: number, percentage: number): number => {
-    return Math.round((originalPrice * (100 - percentage)) / 100 * 100) / 100;
+  const calculateDiscountedPrice = (
+    originalPrice: number,
+    percentage: number
+  ): number => {
+    return Math.round(((originalPrice * (100 - percentage)) / 100) * 100) / 100;
   };
 
   // Update discount fields when price or percentage changes
@@ -429,7 +465,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
 
     // Basic URL validation
     try {
-      new URL(url.startsWith('http') ? url : `https://${url}`);
+      new URL(url.startsWith("http") ? url : `https://${url}`);
     } catch {
       toast.error("Please enter a valid URL format");
       return;
@@ -438,38 +474,42 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
     setIsScraping(true);
     try {
       // Call our API endpoint to scrape the product
-      const response = await fetch('/api/scrape-product', {
-        method: 'POST',
+      const response = await fetch("/api/scrape-product", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ url: url.trim() }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to scrape product information');
+        throw new Error(
+          errorData.error || "Failed to scrape product information"
+        );
       }
 
       const scrapedData = await response.json();
-      
+
       // Check if we got any useful data
       if (!scrapedData.name && !scrapedData.description && !scrapedData.price) {
-        toast.warning("No product information found. The website might not be supported or the product page structure is different.");
+        toast.warning(
+          "No product information found. The website might not be supported or the product page structure is different."
+        );
         return;
       }
-      
+
       // Auto-fill the form with scraped data
       if (scrapedData.name) {
-        form.setValue('name', scrapedData.name);
+        form.setValue("name", scrapedData.name);
       }
       if (scrapedData.description) {
-        form.setValue('description', scrapedData.description);
+        form.setValue("description", scrapedData.description);
       }
       if (scrapedData.price) {
         // Set the numeric price value for the form
-        form.setValue('price', scrapedData.price);
-        
+        form.setValue("price", scrapedData.price);
+
         // Set the formatted price for display
         if (scrapedData.formattedPrice) {
           setFormattedPrice(scrapedData.formattedPrice);
@@ -478,47 +518,59 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
           setFormattedPrice(scrapedData.originalPriceText);
         } else {
           // Fallback: format the numeric price
-                     const formatted = new Intl.NumberFormat('ar-TN', {
-             minimumFractionDigits: 0,
-             maximumFractionDigits: 0
-           }).format(scrapedData.price / 1000);
+          const formatted = new Intl.NumberFormat("ar-TN", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(scrapedData.price / 1000);
           setFormattedPrice(formatted);
         }
       }
       if (scrapedData.brand) {
-        form.setValue('brand', scrapedData.brand);
+        form.setValue("brand", scrapedData.brand);
       }
       if (scrapedData.images && scrapedData.images.length > 0) {
         setImageUrls(scrapedData.images);
-        form.setValue('images', scrapedData.images);
+        form.setValue("images", scrapedData.images);
       }
       if (scrapedData.specs && Object.keys(scrapedData.specs).length > 0) {
         setSpecs(scrapedData.specs);
-        form.setValue('specs', scrapedData.specs);
+        form.setValue("specs", scrapedData.specs);
       }
 
       // Try to suggest category based on scraped content
       if (scrapedData.name || scrapedData.description) {
-        const content = `${scrapedData.name || ''} ${scrapedData.description || ''}`.toLowerCase();
-        
+        const content = `${scrapedData.name || ""} ${
+          scrapedData.description || ""
+        }`.toLowerCase();
+
         // Simple category detection based on keywords
-        if (content.includes('camera') || content.includes('surveillance') || content.includes('security')) {
-          const cameraCategory = categories.find(cat => 
-            cat.name.toLowerCase().includes('camera') || 
-            cat.name.toLowerCase().includes('surveillance') ||
-            cat.name.toLowerCase().includes('security')
+        if (
+          content.includes("camera") ||
+          content.includes("surveillance") ||
+          content.includes("security")
+        ) {
+          const cameraCategory = categories.find(
+            (cat) =>
+              cat.name.toLowerCase().includes("camera") ||
+              cat.name.toLowerCase().includes("surveillance") ||
+              cat.name.toLowerCase().includes("security")
           );
           if (cameraCategory) {
-            form.setValue('category', cameraCategory.name);
+            form.setValue("category", cameraCategory.name);
             toast.info(`Suggested category: ${cameraCategory.name}`);
           }
-        } else if (content.includes('phone') || content.includes('mobile') || content.includes('smartphone')) {
-          const phoneCategory = categories.find(cat => 
-            cat.name.toLowerCase().includes('phone') || 
-            cat.name.toLowerCase().includes('mobile')
+        } else if (
+          content.includes("phone") ||
+          content.includes("mobile") ||
+          content.includes("smartphone")
+        ) {
+          const phoneCategory = categories.find(
+            (cat) =>
+              cat.name.toLowerCase().includes("phone") ||
+              cat.name.toLowerCase().includes("mobile")
           );
           if (phoneCategory) {
-            form.setValue('category', phoneCategory.name);
+            form.setValue("category", phoneCategory.name);
             toast.info(`Suggested category: ${phoneCategory.name}`);
           }
         }
@@ -527,18 +579,26 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
 
       // Show what was scraped
       const scrapedFields = [];
-      if (scrapedData.name) scrapedFields.push('name');
-      if (scrapedData.description) scrapedFields.push('description');
-      if (scrapedData.price) scrapedFields.push('price');
-      if (scrapedData.brand) scrapedFields.push('brand');
-      if (scrapedData.images?.length > 0) scrapedFields.push(`${scrapedData.images.length} images`);
-      if (Object.keys(scrapedData.specs || {}).length > 0) scrapedFields.push('specifications');
+      if (scrapedData.name) scrapedFields.push("name");
+      if (scrapedData.description) scrapedFields.push("description");
+      if (scrapedData.price) scrapedFields.push("price");
+      if (scrapedData.brand) scrapedFields.push("brand");
+      if (scrapedData.images?.length > 0)
+        scrapedFields.push(`${scrapedData.images.length} images`);
+      if (Object.keys(scrapedData.specs || {}).length > 0)
+        scrapedFields.push("specifications");
 
-      toast.success(`Product information scraped successfully! Found: ${scrapedFields.join(', ')}`);
+      toast.success(
+        `Product information scraped successfully! Found: ${scrapedFields.join(
+          ", "
+        )}`
+      );
       setRivalUrl(""); // Clear the URL field after successful scraping
     } catch (error) {
-      console.error('Error scraping product:', error);
-      toast.error("Failed to scrape product information. Please check the URL and try again.");
+      console.error("Error scraping product:", error);
+      toast.error(
+        "Failed to scrape product information. Please check the URL and try again."
+      );
     } finally {
       setIsScraping(false);
     }
@@ -569,7 +629,11 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                       disabled={isScraping}
                       className="flex-1"
                       onKeyPress={(e) => {
-                        if (e.key === 'Enter' && rivalUrl.trim() && !isScraping) {
+                        if (
+                          e.key === "Enter" &&
+                          rivalUrl.trim() &&
+                          !isScraping
+                        ) {
                           scrapeProductInfo(rivalUrl);
                         }
                       }}
@@ -594,7 +658,8 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Paste a product URL from a rival website to automatically fill the form with product information.
+                    Paste a product URL from a rival website to automatically
+                    fill the form with product information.
                   </p>
                 </div>
 
@@ -660,20 +725,30 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                               value={formattedPrice || field.value || ""}
                               onChange={(e) => {
                                 // Remove non-numeric characters except decimal point
-                                const cleanValue = e.target.value.replace(/[^\d.]/g, '');
-                                const numericValue = parseFloat(cleanValue) || 0;
+                                const cleanValue = e.target.value.replace(
+                                  /[^\d.]/g,
+                                  ""
+                                );
+                                const numericValue =
+                                  parseFloat(cleanValue) || 0;
                                 // Store price in millimes (multiply by 1000)
                                 field.onChange(numericValue * 1000);
                                 setFormattedPrice(cleanValue);
                               }}
                               onBlur={(e) => {
                                 // Format the price when leaving the field
-                                const numericValue = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
+                                const numericValue =
+                                  parseFloat(
+                                    e.target.value.replace(/[^\d.]/g, "")
+                                  ) || 0;
                                 if (numericValue > 0) {
-                                  const formatted = new Intl.NumberFormat('ar-TN', {
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 0
-                                  }).format(numericValue);
+                                  const formatted = new Intl.NumberFormat(
+                                    "ar-TN",
+                                    {
+                                      minimumFractionDigits: 0,
+                                      maximumFractionDigits: 0,
+                                    }
+                                  ).format(numericValue);
                                   setFormattedPrice(formatted);
                                   // Store price in millimes (multiply by 1000)
                                   field.onChange(numericValue * 1000);
@@ -697,15 +772,22 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                         <Input
                           type="text"
                           value={
-                            hasDiscount && discountPercentage > 0 && form.getValues("price") > 0
-                              ? new Intl.NumberFormat('ar-TN', {
+                            hasDiscount &&
+                            discountPercentage > 0 &&
+                            form.getValues("price") > 0
+                              ? new Intl.NumberFormat("ar-TN", {
                                   minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0
-                                }).format(calculateDiscountedPrice(form.getValues("price"), discountPercentage) / 1000)
+                                  maximumFractionDigits: 0,
+                                }).format(
+                                  calculateDiscountedPrice(
+                                    form.getValues("price"),
+                                    discountPercentage
+                                  ) / 1000
+                                )
                               : form.getValues("price") > 0
-                              ? new Intl.NumberFormat('ar-TN', {
+                              ? new Intl.NumberFormat("ar-TN", {
                                   minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0
+                                  maximumFractionDigits: 0,
                                 }).format(form.getValues("price") / 1000)
                               : "0"
                           }
@@ -729,7 +811,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                           const isChecked = Boolean(checked);
                           setHasDiscount(isChecked);
                           form.setValue("hasDiscount", isChecked);
-                          
+
                           if (!isChecked) {
                             // Reset discount fields when disabled
                             setDiscountPercentage(0);
@@ -790,13 +872,21 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                                 <Input
                                   type="date"
                                   {...field}
-                                  value={discountEndDate ? discountEndDate.toISOString().split('T')[0] : ""}
+                                  value={
+                                    discountEndDate
+                                      ? discountEndDate
+                                          .toISOString()
+                                          .split("T")[0]
+                                      : ""
+                                  }
                                   onChange={(e) => {
-                                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                                    const date = e.target.value
+                                      ? new Date(e.target.value)
+                                      : undefined;
                                     setDiscountEndDate(date);
                                     field.onChange(date);
                                   }}
-                                  min={new Date().toISOString().split('T')[0]}
+                                  min={new Date().toISOString().split("T")[0]}
                                   disabled={isSubmitting}
                                 />
                               </FormControl>
@@ -809,8 +899,6 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                         />
                       </div>
                     )}
-
-
                   </div>
                 </div>
 
@@ -847,7 +935,8 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                           />
                         </FormControl>
                         <FormDescription>
-                          Enter a custom reference (e.g., F552-5MP) or leave empty to auto-assign the next numeric reference.
+                          Enter a custom reference (e.g., F552-5MP) or leave
+                          empty to auto-assign the next numeric reference.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -964,29 +1053,30 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                   />
 
                   {/* Video URL for surveillance cameras */}
-                  {form.watch("category") === "VidéoSurveillance" && 
-                   form.watch("subcategory") === "Caméra de Surveillance" && (
-                    <FormField
-                      control={form.control}
-                      name="videoUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Video URL</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="https://example.com/video.mp4"
-                              disabled={isSubmitting}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Provide a video URL to demonstrate the camera's quality and features.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                  {form.watch("category") === "VidéoSurveillance" &&
+                    form.watch("subcategory") === "Caméra de Surveillance" && (
+                      <FormField
+                        control={form.control}
+                        name="videoUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Video URL</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="https://example.com/video.mp4"
+                                disabled={isSubmitting}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Provide a video URL to demonstrate the camera's
+                              quality and features.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                 </div>
 
                 {/* Stock Management */}
@@ -1222,7 +1312,9 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                             key={key}
                             className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md"
                           >
-                            <span className="text-sm font-medium text-foreground">{key}:</span>
+                            <span className="text-sm font-medium text-foreground">
+                              {key}:
+                            </span>
                             <span className="text-sm text-muted-foreground">
                               {value}
                             </span>

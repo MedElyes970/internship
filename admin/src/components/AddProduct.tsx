@@ -136,10 +136,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
   // Initialize formatted price when form loads
   useEffect(() => {
     if (form.getValues("price") > 0) {
-      const formatted = new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(form.getValues("price"));
+             const formatted = new Intl.NumberFormat('ar-TN', {
+         minimumFractionDigits: 0,
+         maximumFractionDigits: 0
+       }).format(form.getValues("price") / 1000);
       setFormattedPrice(formatted);
     }
   }, [form]);
@@ -411,17 +411,17 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
       form.setValue("discountedPrice", discounted);
       
       // Update the formatted price display to show the discounted price
-      const formatted = new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(discounted);
+               const formatted = new Intl.NumberFormat('ar-TN', {
+           minimumFractionDigits: 0,
+           maximumFractionDigits: 0
+         }).format(discounted / 1000);
       setFormattedPrice(formatted);
     } else if (hasDiscount && price > 0) {
       // If discount is enabled but no percentage, show original price
-      const formatted = new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(price);
+             const formatted = new Intl.NumberFormat('ar-TN', {
+         minimumFractionDigits: 0,
+         maximumFractionDigits: 0
+       }).format(price / 1000);
       setFormattedPrice(formatted);
     }
   }, [hasDiscount, discountPercentage, form]);
@@ -484,10 +484,10 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
           setFormattedPrice(scrapedData.originalPriceText);
         } else {
           // Fallback: format the numeric price
-          const formatted = new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-          }).format(scrapedData.price);
+                     const formatted = new Intl.NumberFormat('ar-TN', {
+             minimumFractionDigits: 0,
+             maximumFractionDigits: 0
+           }).format(scrapedData.price / 1000);
           setFormattedPrice(formatted);
         }
       }
@@ -667,19 +667,21 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                               // Remove non-numeric characters except decimal point
                               const cleanValue = e.target.value.replace(/[^\d.]/g, '');
                               const numericValue = parseFloat(cleanValue) || 0;
-                              field.onChange(numericValue);
+                              // Store price in millimes (multiply by 1000)
+                              field.onChange(numericValue * 1000);
                               setFormattedPrice(cleanValue);
                             }}
                             onBlur={(e) => {
                               // Format the price when leaving the field
                               const numericValue = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
                               if (numericValue > 0) {
-                                const formatted = new Intl.NumberFormat('en-US', {
+                                const formatted = new Intl.NumberFormat('ar-TN', {
                                   minimumFractionDigits: 0,
                                   maximumFractionDigits: 0
                                 }).format(numericValue);
                                 setFormattedPrice(formatted);
-                                field.onChange(numericValue);
+                                // Store price in millimes (multiply by 1000)
+                                field.onChange(numericValue * 1000);
                               }
                             }}
                             placeholder="0.00"
@@ -687,7 +689,7 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                           />
                         </FormControl>
                         <FormDescription>
-                          Enter the price of the product.
+                          Enter the price of the product in Tunisian Dinars (DT).
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -793,32 +795,32 @@ const AddProduct = ({ onSuccess }: AddProductProps) => {
                             <div className="flex justify-between items-center">
                               <span>Original Price:</span>
                               <span className="line-through">
-                                {new Intl.NumberFormat('en-US', {
+                                {new Intl.NumberFormat('ar-TN', {
                                   style: 'currency',
-                                  currency: 'USD',
+                                  currency: 'TND',
                                   minimumFractionDigits: 0,
                                   maximumFractionDigits: 0
-                                }).format(form.getValues("price"))}
+                                }).format(form.getValues("price") / 1000)}
                               </span>
                             </div>
                             <div className="flex justify-between items-center font-semibold">
                               <span>Discounted Price:</span>
                               <span className="text-green-600">
-                                {new Intl.NumberFormat('en-US', {
+                                {new Intl.NumberFormat('ar-TN', {
                                   style: 'currency',
-                                  currency: 'USD',
+                                  currency: 'TND',
                                   minimumFractionDigits: 0,
                                   maximumFractionDigits: 0
-                                }).format(calculateDiscountedPrice(form.getValues("price"), discountPercentage))}
+                                }).format(calculateDiscountedPrice(form.getValues("price"), discountPercentage) / 1000)}
                               </span>
                             </div>
                             <div className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                              You save {new Intl.NumberFormat('en-US', {
+                              You save {new Intl.NumberFormat('ar-TN', {
                                 style: 'currency',
-                                currency: 'USD',
+                                currency: 'TND',
                                 minimumFractionDigits: 0,
                                 maximumFractionDigits: 0
-                              }).format(form.getValues("price") - calculateDiscountedPrice(form.getValues("price"), discountPercentage))} ({discountPercentage}% off)
+                              }).format((form.getValues("price") - calculateDiscountedPrice(form.getValues("price"), discountPercentage)) / 1000)} ({discountPercentage}% off)
                             </div>
                           </div>
                         </div>

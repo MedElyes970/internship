@@ -86,10 +86,10 @@ export const columns: ColumnDef<Payment>[] = [
     header: () => <div className="text-right">Amount</div>,
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue("amount"));
-      const formatted = new Intl.NumberFormat("en-US", {
+      const formatted = new Intl.NumberFormat("ar-TN", {
         style: "currency",
-        currency: "USD",
-      }).format(amount);
+        currency: "TND",
+      }).format(amount / 1000);
 
       return <div className="text-right font-medium">{formatted}</div>;
     },

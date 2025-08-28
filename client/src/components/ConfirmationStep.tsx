@@ -155,7 +155,7 @@ const ConfirmationStep = ({
         )}
         <div className="flex justify-between text-sm">
           <span className="text-gray-500">Shipping Fee</span>
-          <span className="font-medium">$0.00</span>
+                                <span className="font-medium">0,000 DT</span>
         </div>
         <hr className="border-gray-200" />
         <div className="flex justify-between">

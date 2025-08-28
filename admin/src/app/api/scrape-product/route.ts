@@ -321,10 +321,12 @@ export async function POST(request: NextRequest) {
         
         // Also store a properly formatted version with commas
         if (!isNaN(scrapedData.price)) {
-          scrapedData.formattedPrice = new Intl.NumberFormat('en-US', {
+          // Convert price to millimes for storage
+          scrapedData.price = scrapedData.price * 1000;
+          scrapedData.formattedPrice = new Intl.NumberFormat('ar-TN', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 2
-          }).format(scrapedData.price);
+          }).format(scrapedData.price / 1000);
           console.log(`Formatted price: ${scrapedData.formattedPrice}`);
         }
       } else {

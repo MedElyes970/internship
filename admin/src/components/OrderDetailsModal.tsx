@@ -87,10 +87,10 @@ const OrderDetailsModal = ({
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("ar-TN", {
       style: "currency",
-      currency: "USD",
-    }).format(amount);
+      currency: "TND",
+    }).format(amount / 1000);
   };
 
   const handleStatusUpdate = async () => {

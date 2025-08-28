@@ -57,12 +57,14 @@ export const getCurrentPrice = (product: ProductType): number => {
 
 // Helper function to format price in Tunisian format (no decimals, comma separator)
 export const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  // Convert price from millimes to dinars (divide by 1000)
+  const priceInDinars = price / 1000;
+  return new Intl.NumberFormat('ar-TN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'TND',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
-  }).format(price);
+  }).format(priceInDinars);
 };
 
 export type FetchProductsOptions = {

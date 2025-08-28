@@ -105,12 +105,14 @@ export default function ProductsPage() {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
+    // Convert price from millimes to dinars (divide by 1000)
+    const priceInDinars = price / 1000;
+    return new Intl.NumberFormat('ar-TN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'TND',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(price);
+    }).format(priceInDinars);
   };
 
   // Get categories from database
@@ -250,20 +252,20 @@ export default function ProductsPage() {
                     {product.hasDiscount && product.discountPercentage && product.discountPercentage > 0 ? (
                       <>
                         <span className="text-lg font-bold text-green-600">
-                          {new Intl.NumberFormat('en-US', {
+                          {new Intl.NumberFormat('ar-TN', {
                             style: 'currency',
-                            currency: 'USD',
+                            currency: 'TND',
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 0
-                          }).format(product.discountedPrice || product.price)}
+                          }).format((product.discountedPrice || product.price) / 1000)}
                         </span>
                         <span className="text-sm text-muted-foreground line-through">
-                          {new Intl.NumberFormat('en-US', {
+                          {new Intl.NumberFormat('ar-TN', {
                             style: 'currency',
-                            currency: 'USD',
+                            currency: 'TND',
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 0
-                          }).format(product.price)}
+                          }).format(product.price / 1000)}
                         </span>
                         <Badge variant="destructive" className="text-xs w-fit">
                           {product.discountPercentage}% OFF

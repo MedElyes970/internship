@@ -9,9 +9,24 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc, increment, setDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  doc,
+  getDoc,
+  updateDoc,
+  increment,
+  setDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { updateProductsAfterOrder, checkProductsStock, isDiscountValid, getCurrentPrice, formatPrice } from "@/lib/products";
+import {
+  updateProductsAfterOrder,
+  checkProductsStock,
+  isDiscountValid,
+  getCurrentPrice,
+  formatPrice,
+} from "@/lib/products";
 
 const steps = [
   { id: 1, title: "Shopping Cart" },
@@ -33,7 +48,15 @@ const CartPage = () => {
   const isCartEmpty = cart.length === 0;
 
   // Check for stock issues
-  const [stockIssues, setStockIssues] = useState<Array<{ id: string; name: string; requested: number; available: number; error: string }>>([]);
+  const [stockIssues, setStockIssues] = useState<
+    Array<{
+      id: string;
+      name: string;
+      requested: number;
+      available: number;
+      error: string;
+    }>
+  >([]);
   const [hasStockIssues, setHasStockIssues] = useState(false);
 
   // Check stock availability when cart changes
@@ -46,25 +69,32 @@ const CartPage = () => {
       }
 
       try {
-        const stockCheck = await checkProductsStock(cart.map(item => ({ id: item.id as string, quantity: item.quantity })));
+        const stockCheck = await checkProductsStock(
+          cart.map((item) => ({
+            id: item.id as string,
+            quantity: item.quantity,
+          }))
+        );
         setStockIssues(stockCheck.stockIssues);
         setHasStockIssues(!stockCheck.allInStock);
       } catch (error) {
-        console.error('Error checking stock:', error);
+        console.error("Error checking stock:", error);
         // Fallback to basic validation
-        const basicStockIssues = cart.filter(item => {
+        const basicStockIssues = cart.filter((item) => {
           if (item.stock !== undefined && item.quantity > item.stock) {
             return true;
           }
           return false;
         });
-        setStockIssues(basicStockIssues.map(item => ({
-          id: item.id as string,
-          name: item.name,
-          requested: item.quantity,
-          available: item.stock || 0,
-          error: `Insufficient stock. Available: ${item.stock}, Requested: ${item.quantity}`
-        })));
+        setStockIssues(
+          basicStockIssues.map((item) => ({
+            id: item.id as string,
+            name: item.name,
+            requested: item.quantity,
+            available: item.stock || 0,
+            error: `Insufficient stock. Available: ${item.stock}, Requested: ${item.quantity}`,
+          }))
+        );
         setHasStockIssues(basicStockIssues.length > 0);
       }
     };
@@ -75,28 +105,36 @@ const CartPage = () => {
   const handleConfirmOrder = async () => {
     console.log("handleConfirmOrder called");
     if (!user || !shippingForm || cart.length === 0) {
-      console.log("Early return - missing data:", { user: !!user, shippingForm: !!shippingForm, cartLength: cart.length });
+      console.log("Early return - missing data:", {
+        user: !!user,
+        shippingForm: !!shippingForm,
+        cartLength: cart.length,
+      });
       return;
     }
 
     // Check for stock issues before proceeding
     if (hasStockIssues) {
-      alert("Some items in your cart have insufficient stock. Please review your cart.");
+      alert(
+        "Some items in your cart have insufficient stock. Please review your cart."
+      );
       return;
     }
 
     try {
       console.log("Creating order...");
-      
+
       // First, update product stock and sales count
       console.log("Updating product stock and sales count...");
-      await updateProductsAfterOrder(cart.map(item => ({ id: item.id as string, quantity: item.quantity })));
+      await updateProductsAfterOrder(
+        cart.map((item) => ({ id: item.id as string, quantity: item.quantity }))
+      );
       console.log("Product updates completed successfully");
-      
+
       // Get the next order number
       const counterRef = doc(db, "counters", "orders");
       const counterDoc = await getDoc(counterRef);
-      
+
       let orderNumber = 1;
       if (counterDoc.exists()) {
         orderNumber = counterDoc.data().current + 1;
@@ -106,14 +144,17 @@ const CartPage = () => {
         // Initialize the counter if it doesn't exist
         await setDoc(counterRef, { current: 1 });
       }
-      
+
       const orderData = {
         orderNumber: orderNumber,
         userId: user.uid,
         items: cart,
         shippingInfo: shippingForm,
         total: cart.reduce((acc, item) => {
-          const hasValidDiscount = item.hasDiscount && item.discountPercentage && isDiscountValid(item);
+          const hasValidDiscount =
+            item.hasDiscount &&
+            item.discountPercentage &&
+            isDiscountValid(item);
           const currentPrice = getCurrentPrice(item);
           return acc + currentPrice * item.quantity;
         }, 0),
@@ -122,14 +163,19 @@ const CartPage = () => {
       };
 
       const docRef = await addDoc(collection(db, "orders"), orderData);
-      console.log("Order created with ID:", docRef.id, "Order Number:", orderNumber);
+      console.log(
+        "Order created with ID:",
+        docRef.id,
+        "Order Number:",
+        orderNumber
+      );
 
       // Add order to user's order history
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
         orderHistory: increment(1),
         orders: increment(1),
-        lastOrderDate: serverTimestamp()
+        lastOrderDate: serverTimestamp(),
       });
 
       clearCart();
@@ -139,7 +185,11 @@ const CartPage = () => {
     } catch (error) {
       console.error("Error creating order:", error);
       // Show user-friendly error message
-      alert(`Failed to create order: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+      alert(
+        `Failed to create order: ${
+          error instanceof Error ? error.message : "Unknown error occurred"
+        }`
+      );
     }
   };
 
@@ -196,30 +246,37 @@ const CartPage = () => {
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <p className="text-red-800 font-medium text-sm">Stock Issues Detected</p>
+                      <p className="text-red-800 font-medium text-sm">
+                        Stock Issues Detected
+                      </p>
                     </div>
                     <p className="text-red-700 text-sm mt-2">
-                      Some items in your cart have insufficient stock. Please review and adjust quantities.
+                      Some items in your cart have insufficient stock. Please
+                      review and adjust quantities.
                     </p>
                     <div className="mt-3 space-y-2">
                       {stockIssues.map((item) => (
                         <div key={item.id} className="text-red-700 text-sm">
-                          • {item.name}: Requested {item.requested}, Available {item.available}
+                          • {item.name}: Requested {item.requested}, Available{" "}
+                          {item.available}
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                
+
                 {/* Cart Items */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   {cart.map((item) => {
-                    const hasValidDiscount = item.hasDiscount && item.discountPercentage && isDiscountValid(item);
+                    const hasValidDiscount =
+                      item.hasDiscount &&
+                      item.discountPercentage &&
+                      isDiscountValid(item);
                     const currentPrice = getCurrentPrice(item);
                     const totalPrice = currentPrice * item.quantity;
                     const originalTotal = item.price * item.quantity;
                     const savings = originalTotal - totalPrice;
-                    
+
                     return (
                       <div
                         className="flex items-center justify-between"
@@ -250,12 +307,20 @@ const CartPage = () => {
                               <div className="flex flex-col">
                                 {hasValidDiscount ? (
                                   <>
-                                    <p className="font-medium text-green-600">{formatPrice(totalPrice)}</p>
-                                    <p className="text-xs text-gray-500 line-through">{formatPrice(originalTotal)}</p>
-                                    <p className="text-xs text-green-600">You save {formatPrice(savings)}</p>
+                                    <p className="font-medium text-green-600">
+                                      {formatPrice(totalPrice)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 line-through">
+                                      {formatPrice(originalTotal)}
+                                    </p>
+                                    <p className="text-xs text-green-600">
+                                      You save {formatPrice(savings)}
+                                    </p>
                                   </>
                                 ) : (
-                                  <p className="font-medium">{formatPrice(totalPrice)}</p>
+                                  <p className="font-medium">
+                                    {formatPrice(totalPrice)}
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -297,14 +362,20 @@ const CartPage = () => {
             <div className="flex flex-col gap-4">
               {/* Calculate totals with discounts */}
               {(() => {
-                const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+                const subtotal = cart.reduce(
+                  (acc, item) => acc + item.price * item.quantity,
+                  0
+                );
                 const totalWithDiscounts = cart.reduce((acc, item) => {
-                  const hasValidDiscount = item.hasDiscount && item.discountPercentage && isDiscountValid(item);
+                  const hasValidDiscount =
+                    item.hasDiscount &&
+                    item.discountPercentage &&
+                    isDiscountValid(item);
                   const currentPrice = getCurrentPrice(item);
                   return acc + currentPrice * item.quantity;
                 }, 0);
                 const totalSavings = subtotal - totalWithDiscounts;
-                
+
                 return (
                   <>
                     <div className="flex justify-between text-sm">
@@ -314,26 +385,34 @@ const CartPage = () => {
                     {totalSavings > 0 && (
                       <div className="flex justify-between text-sm">
                         <p className="text-gray-500">Total Savings</p>
-                        <p className="font-medium text-green-600">-{formatPrice(totalSavings)}</p>
+                        <p className="font-medium text-green-600">
+                          -{formatPrice(totalSavings)}
+                        </p>
                       </div>
                     )}
                     <div className="flex justify-between text-sm">
                       <p className="text-gray-500">Shipping Fee</p>
-                      <p className="font-medium">0,000 DT</p>
+                      <p className="font-medium">7,000 DT</p>
                     </div>
                     <hr className="border-gray-200" />
                     <div className="flex justify-between">
                       <p className="text-gray-800 font-semibold">Total</p>
-                      <p className="font-medium">{formatPrice(totalWithDiscounts)}</p>
+                      <p className="font-medium">
+                        {formatPrice(totalWithDiscounts)}
+                      </p>
                     </div>
                   </>
                 );
               })()}
 
               <button
-                onClick={() =>
-                  !isCartEmpty && router.push("/cart?step=2", { scroll: false })
-                }
+                onClick={() => {
+                  if (!user) {
+                    router.push("/login", { scroll: false });
+                  } else if (!isCartEmpty && !hasStockIssues) {
+                    router.push("/cart?step=2", { scroll: false });
+                  }
+                }}
                 disabled={isCartEmpty || hasStockIssues}
                 className={`w-full transition-all duration-300 text-white p-2 rounded-lg flex items-center justify-center gap-2 ${
                   isCartEmpty || hasStockIssues
@@ -341,7 +420,11 @@ const CartPage = () => {
                     : "bg-gray-800 hover:bg-gray-900 cursor-pointer"
                 }`}
               >
-                {hasStockIssues ? "Resolve Stock Issues" : "Continue"}
+                {!user
+                  ? "Login to Continue"
+                  : hasStockIssues
+                  ? "Resolve Stock Issues"
+                  : "Continue"}
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>

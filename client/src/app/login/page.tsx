@@ -52,8 +52,8 @@ const LoginPage = () => {
       {/* LOGO + TITLE */}
       <div className="flex flex-col items-center gap-2 mb-8">
         <Image
-          src="/logo.png"
-          alt="TrendLama"
+          src="/SSI-logo.png"
+          alt="SSI Logo"
           width={48}
           height={48}
           className="w-12 h-12"

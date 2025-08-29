@@ -19,8 +19,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trendlama - Best Clothes",
-  description: "Trendlama is the best place to find the best clothes",
+  title: "SSI",
+  description: "Soutènement de la Société des Informations.",
+  icons: {
+    icon: "/SSI-logo.ico",
+  },
 };
 
 export default function RootLayout({

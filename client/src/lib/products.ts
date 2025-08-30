@@ -72,6 +72,8 @@ export type FetchProductsOptions = {
   subcategorySlug?: string | null;
   sort?: "newest" | "oldest" | "asc" | "desc";
   limitCount?: number;
+  page?: number;
+  productsPerPage?: number;
 };
 
 const mapDocToProduct = (snap: any): ProductType => {
@@ -157,7 +159,7 @@ const getSubcategoryNameFromSlug = async (subcategorySlug: string, categorySlug:
 };
 
 export const fetchProducts = async (options: FetchProductsOptions = {}): Promise<ProductsType> => {
-  const { categorySlug, subcategorySlug, sort } = options;
+  const { categorySlug, subcategorySlug, sort, page = 1, productsPerPage = 12 } = options;
 
   const colRef = collection(db, PRODUCTS_COLLECTION);
   const constraints: any[] = [];
@@ -188,9 +190,14 @@ export const fetchProducts = async (options: FetchProductsOptions = {}): Promise
   
   console.log('Firestore query result:', snapshot.docs.length, 'products');
   
-  const products = snapshot.docs.map(mapDocToProduct);
+  const allProducts = snapshot.docs.map(mapDocToProduct);
   
-  console.log('Mapped products with discounts:', products.filter(p => p.hasDiscount).map(p => ({
+  // Apply pagination
+  const startIndex = (page - 1) * productsPerPage;
+  const endIndex = startIndex + productsPerPage;
+  const paginatedProducts = allProducts.slice(startIndex, endIndex);
+  
+  console.log('Mapped products with discounts:', paginatedProducts.filter(p => p.hasDiscount).map(p => ({
     name: p.name,
     hasDiscount: p.hasDiscount,
     discountPercentage: p.discountPercentage,
@@ -198,7 +205,7 @@ export const fetchProducts = async (options: FetchProductsOptions = {}): Promise
     discountedPrice: p.discountedPrice
   })));
   
-  return products;
+  return paginatedProducts;
 };
 
 export const fetchProductById = async (id: string): Promise<ProductType | null> => {
@@ -321,6 +328,35 @@ export const checkProductStock = async (productId: string, requestedQuantity: nu
     console.error(`Error checking stock for product ${productId}:`, error);
     return { hasStock: false, error: "Error checking stock availability" };
   }
+};
+
+// Get total count of products for pagination
+export const getProductsCount = async (options: Omit<FetchProductsOptions, 'page' | 'productsPerPage'> = {}): Promise<number> => {
+  const { categorySlug, subcategorySlug } = options;
+
+  const colRef = collection(db, PRODUCTS_COLLECTION);
+  const constraints: any[] = [];
+
+  // Convert category slug to actual category name
+  if (categorySlug && categorySlug !== "all") {
+    const categoryName = await getCategoryNameFromSlug(categorySlug);
+    if (categoryName) {
+      constraints.push(where("category", "==", categoryName));
+    }
+  }
+
+  // Convert subcategory slug to actual subcategory name
+  if (subcategorySlug && categorySlug) {
+    const subcategoryName = await getSubcategoryNameFromSlug(subcategorySlug, categorySlug);
+    if (subcategoryName) {
+      constraints.push(where("subcategory", "==", subcategoryName));
+    }
+  }
+
+  const q = constraints.length ? query(colRef, ...constraints) : query(colRef);
+  const snapshot = await getDocs(q);
+  
+  return snapshot.docs.length;
 };
 
 // Batch check stock for multiple products

@@ -8,9 +8,12 @@ const Homepage = async ({
     category: string | null;
     subcategory: string | null;
     sort: string | null;
+    page: string | null;
   }>;
 }) => {
-  const { category, subcategory, sort } = await searchParams;
+  const { category, subcategory, sort, page } = await searchParams;
+  const currentPage = page ? parseInt(page) : 1;
+  
   return (
     <div className="">
       <div className="relative aspect-[3/1] mb-12">
@@ -21,6 +24,8 @@ const Homepage = async ({
         subcategory={subcategory}
         params="homepage"
         sort={sort}
+        page={currentPage}
+        productsPerPage={12}
       />
     </div>
   );

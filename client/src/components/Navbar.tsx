@@ -4,7 +4,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import SearchBar from "./SearchBar";
-import { Bell, Home, ShoppingCart, User, LogOut, Package } from "lucide-react";
+import { Bell, Home, ShoppingCart, User, LogOut, Package, Mail } from "lucide-react";
 import ShoppingCartIcon from "./ShoppingCartIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useRef, useEffect } from "react";
@@ -56,8 +56,11 @@ const Navbar = () => {
       {/* RIGHT */}
       <div className="flex items-center gap-6">
         <SearchBar />
-        <Link href="/">
+        <Link href="/" title="Home">
           <Home className="w-4 h-4 text-gray-600" />
+        </Link>
+        <Link href="/contact" title="Contact">
+          <Mail className="w-4 h-4 text-gray-600" />
         </Link>
         <Bell className="w-4 h-4 text-gray-600" />
         <ShoppingCartIcon />

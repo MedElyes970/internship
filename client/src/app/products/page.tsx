@@ -1,5 +1,6 @@
 import ProductList from "@/components/ProductList";
 import PopularProducts from "@/components/PopularProducts";
+import TrustedBy from "@/components/TrustedBy";
 
 const ProductsPage = async ({
   searchParams,
@@ -25,6 +26,7 @@ const ProductsPage = async ({
         productsPerPage={12}
       />
       <PopularProducts />
+      <TrustedBy />
     </div>
   );
 };

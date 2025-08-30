@@ -1,4 +1,5 @@
 import ProductList from "@/components/ProductList";
+import PopularProducts from "@/components/PopularProducts";
 import Image from "next/image";
 
 const Homepage = async ({
@@ -27,6 +28,7 @@ const Homepage = async ({
         page={currentPage}
         productsPerPage={12}
       />
+      <PopularProducts />
     </div>
   );
 };

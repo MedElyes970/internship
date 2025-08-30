@@ -1,4 +1,5 @@
 import ProductList from "@/components/ProductList";
+import PopularProducts from "@/components/PopularProducts";
 
 const ProductsPage = async ({
   searchParams,
@@ -23,6 +24,7 @@ const ProductsPage = async ({
         page={currentPage}
         productsPerPage={12}
       />
+      <PopularProducts />
     </div>
   );
 };

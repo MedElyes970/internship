@@ -627,3 +627,52 @@ export const getCategorySalesData = async (limit: number = 6): Promise<Array<{
     throw new Error(`Failed to get category sales data: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
+
+// Get monthly sales trend data
+export const getMonthlySalesTrend = async (months: number = 6): Promise<Array<{
+  month: string;
+  totalSales: number;
+  newProducts: number;
+}>> => {
+  try {
+    console.log('Fetching monthly sales trend data...');
+    
+    const products = await getProducts();
+    console.log(`Retrieved ${products.length} products for trend analysis`);
+    
+    // Generate last 6 months
+    const monthsData = [];
+    const now = new Date();
+    
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      // Filter products created in this month
+      const productsInMonth = products.filter(product => {
+        if (!product.createdAt) return false;
+        
+        const productDate = product.createdAt.toDate ? product.createdAt.toDate() : new Date(product.createdAt);
+        const productMonth = `${productDate.getFullYear()}-${String(productDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        return productMonth === monthKey;
+      });
+      
+      // Calculate total sales for products created in this month
+      const totalSales = productsInMonth.reduce((sum, product) => sum + (product.salesCount || 0), 0);
+      
+      monthsData.push({
+        month: monthName,
+        totalSales,
+        newProducts: productsInMonth.length
+      });
+    }
+    
+    console.log('Monthly sales trend data:', monthsData);
+    return monthsData;
+  } catch (error) {
+    console.error('Error getting monthly sales trend:', error);
+    throw new Error(`Failed to get monthly sales trend: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};

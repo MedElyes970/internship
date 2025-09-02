@@ -156,15 +156,15 @@ const OrderDetailsModal = ({
               {/* Order Summary */}
               <div>
                 <h3 className="font-semibold mb-2">Order Summary</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm bg-muted p-4 rounded-lg">
                   <div>
-                    <span className="text-gray-600">Order Date:</span>
+                    <span className="text-muted-foreground">Order Date:</span>
                     <p className="font-medium">
                       {formatOrderDate(order.createdAt)}
                     </p>
                   </div>
                   <div>
-                    <span className="text-gray-600">Total Amount:</span>
+                    <span className="text-muted-foreground">Total Amount:</span>
                     <p className="font-medium text-lg">
                       {formatPrice(order.total)}
                     </p>
@@ -176,37 +176,37 @@ const OrderDetailsModal = ({
               {order.shippingInfo && (
                 <div>
                   <h3 className="font-semibold mb-2">Customer Information</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm bg-gray-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4 text-sm bg-muted p-4 rounded-lg">
                     <p className="break-all">
-                      <span className="text-gray-600">Name:</span>{" "}
+                      <span className="text-muted-foreground">Name:</span>{" "}
                       {order.shippingInfo.name || "N/A"}
                     </p>
                     <p className="break-all">
-                      <span className="text-gray-600">Email:</span>{" "}
+                      <span className="text-muted-foreground">Email:</span>{" "}
                       {order.shippingInfo.email || "N/A"}
                     </p>
                     <p>
-                      <span className="text-gray-600">Phone:</span>{" "}
+                      <span className="text-muted-foreground">Phone:</span>{" "}
                       {order.shippingInfo.phone || "N/A"}
                     </p>
                     <p className="break-all">
-                      <span className="text-gray-600">Address:</span>{" "}
+                      <span className="text-muted-foreground">Address:</span>{" "}
                       {order.shippingInfo.address || "N/A"}
                     </p>
                     <p>
-                      <span className="text-gray-600">City:</span>{" "}
+                      <span className="text-muted-foreground">City:</span>{" "}
                       {order.shippingInfo.city || "N/A"}
                     </p>
                     <p>
-                      <span className="text-gray-600">State:</span>{" "}
+                      <span className="text-muted-foreground">State:</span>{" "}
                       {order.shippingInfo.state || "N/A"}
                     </p>
                     <p>
-                      <span className="text-gray-600">ZIP:</span>{" "}
+                      <span className="text-muted-foreground">ZIP:</span>{" "}
                       {order.shippingInfo.zip || "N/A"}
                     </p>
                     <p>
-                      <span className="text-gray-600">Country:</span>{" "}
+                      <span className="text-muted-foreground">Country:</span>{" "}
                       {order.shippingInfo.country || "N/A"}
                     </p>
                   </div>
@@ -221,10 +221,10 @@ const OrderDetailsModal = ({
                     {order.items.map((item: any, i: number) => (
                       <div
                         key={i}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                        className="flex items-center gap-3 p-3 bg-muted rounded-lg"
                       >
                         {/* Product Image */}
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                           <img
                             src={
                               item.images && item.images.length > 0
@@ -241,7 +241,7 @@ const OrderDetailsModal = ({
                           <p className="font-medium text-sm break-words">
                             {item.name}
                           </p>
-                          <p className="text-xs text-gray-600">
+                          <p className="text-xs text-muted-foreground">
                             Qty: {item.quantity}
                           </p>
                         </div>
@@ -251,7 +251,7 @@ const OrderDetailsModal = ({
                           <p className="font-medium">
                             {formatPrice(item.price)}
                           </p>
-                          <p className="text-xs text-gray-600">
+                          <p className="text-xs text-muted-foreground">
                             Total: {formatPrice(item.price * item.quantity)}
                           </p>
                         </div>

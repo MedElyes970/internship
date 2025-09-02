@@ -62,7 +62,7 @@ const AppBarChart = () => {
         <div className="min-h-[200px] w-full flex items-center justify-center">
           <div className="text-center text-red-500">
             <p>Error loading data</p>
-            <p className="text-sm text-gray-500">{error}</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
           </div>
         </div>
       </div>
@@ -74,10 +74,10 @@ const AppBarChart = () => {
       <div className="">
         <h1 className="text-lg font-medium mb-6">Category Performance</h1>
         <div className="min-h-[200px] w-full flex items-center justify-center">
-          <div className="text-center text-gray-500">
-            <p>No sales data available</p>
-            <p className="text-sm">Categories will appear here once products have sales</p>
-          </div>
+                      <div className="text-center text-muted-foreground">
+              <p>No sales data available</p>
+              <p className="text-sm">Categories will appear here once products have sales</p>
+            </div>
         </div>
       </div>
     );

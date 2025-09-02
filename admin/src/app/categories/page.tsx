@@ -124,7 +124,7 @@ export default function CategoriesPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-lg">Loading categories...</p>
         </div>
       </div>
@@ -241,16 +241,16 @@ export default function CategoriesPage() {
 
                  {/* Subcategories List */}
                  {category.subcategories.length > 0 && (
-                   <div className="mt-4 pt-3 border-t border-gray-200">
-                     <h4 className="text-sm font-medium text-gray-700 mb-2">Subcategories:</h4>
+                   <div className="mt-4 pt-3 border-t border-border">
+                     <h4 className="text-sm font-medium text-foreground mb-2">Subcategories:</h4>
                      <div className="space-y-2">
                        {category.subcategories.map((subcategory) => (
-                         <div key={subcategory.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                         <div key={subcategory.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
                            <div className="flex items-center gap-2">
                              <Folder className="h-3 w-3 text-green-500" />
                              <div>
-                               <div className="text-sm font-medium">{subcategory.name}</div>
-                               <div className="text-xs text-gray-500">{subcategory.slug}</div>
+                               <div className="text-sm font-medium text-foreground">{subcategory.name}</div>
+                               <div className="text-xs text-muted-foreground">{subcategory.slug}</div>
                              </div>
                            </div>
                            <div className="flex gap-1">

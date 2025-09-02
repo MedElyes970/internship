@@ -228,7 +228,7 @@ export default function ProductsPage() {
               <CardContent className="space-y-3">
                 {/* Product Image */}
                 {product.images && product.images.length > 0 && (
-                  <div className="aspect-square overflow-hidden rounded-md bg-gray-100">
+                  <div className="aspect-square overflow-hidden rounded-md bg-muted">
                     <img 
                       src={product.images[0]} 
                       alt={product.name}

@@ -97,7 +97,7 @@ const AppPieChart = () => {
         <div className="mx-auto aspect-square max-h-[250px] flex items-center justify-center">
           <div className="text-center text-red-500">
             <p>Error loading data</p>
-            <p className="text-sm text-gray-500">{error}</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
           </div>
         </div>
       </div>
@@ -109,10 +109,10 @@ const AppPieChart = () => {
       <div className="">
         <h1 className="text-lg font-medium mb-6">Category Distribution</h1>
         <div className="mx-auto aspect-square max-h-[250px] flex items-center justify-center">
-          <div className="text-center text-gray-500">
-            <p>No categories available</p>
-            <p className="text-sm">Categories will appear here once products are added</p>
-          </div>
+                      <div className="text-center text-muted-foreground">
+              <p>No categories available</p>
+              <p className="text-sm">Categories will appear here once products are added</p>
+            </div>
         </div>
       </div>
     );

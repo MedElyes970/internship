@@ -137,12 +137,12 @@ const CardList = ({ title }: { title: string }) => {
                 key={index}
                 className="flex-row items-center justify-between gap-4 p-4"
               >
-                <div className="w-12 h-12 rounded-sm bg-gray-200 animate-pulse"></div>
+                <div className="w-12 h-12 rounded-sm bg-muted animate-pulse"></div>
                 <CardContent className="flex-1 p-0">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                  <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
                 </CardContent>
                 <CardFooter className="p-0">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-12"></div>
+                  <div className="h-4 bg-muted rounded animate-pulse w-12"></div>
                 </CardFooter>
               </Card>
             ))
@@ -183,7 +183,7 @@ const CardList = ({ title }: { title: string }) => {
             </div>
           ) : (
             // No products found
-            <div className="text-center text-gray-500 py-4">
+            <div className="text-center text-muted-foreground py-4">
               No products with sales found
             </div>
           )
@@ -196,13 +196,13 @@ const CardList = ({ title }: { title: string }) => {
                 key={index}
                 className="flex-row items-center justify-between gap-4 p-4"
               >
-                <div className="w-12 h-12 rounded-sm bg-gray-200 animate-pulse"></div>
+                <div className="w-12 h-12 rounded-sm bg-muted animate-pulse"></div>
                 <CardContent className="flex-1 p-0">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-24 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
+                  <div className="h-4 bg-muted rounded animate-pulse w-24 mb-2"></div>
+                  <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
                 </CardContent>
                 <CardFooter className="p-0">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-12"></div>
+                  <div className="h-4 bg-muted rounded animate-pulse w-12"></div>
                 </CardFooter>
               </Card>
             ))
@@ -223,7 +223,7 @@ const CardList = ({ title }: { title: string }) => {
                   <Badge variant={getStatusBadgeVariant(order.status)} className="text-xs mt-1">
                     {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                   </Badge>
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-muted-foreground mt-1">
                     {order.customerName} • {formatOrderDate(order.createdAt)}
                   </div>
                 </CardContent>
@@ -239,7 +239,7 @@ const CardList = ({ title }: { title: string }) => {
             </div>
           ) : (
             // No orders found
-            <div className="text-center text-gray-500 py-4">
+            <div className="text-center text-muted-foreground py-4">
               <div className="text-sm">No orders yet</div>
               <div className="text-xs mt-1">Orders will appear here once customers start shopping</div>
             </div>

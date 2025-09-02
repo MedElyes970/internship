@@ -128,31 +128,31 @@ const CardList = ({ title }: { title: string }) => {
   return (
     <div className="">
       <h1 className="text-lg font-medium mb-6">{title}</h1>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         {title === "Popular Products" ? (
           loading ? (
             // Loading skeleton while fetching data
             Array.from({ length: 5 }).map((_, index) => (
               <Card
                 key={index}
-                className="flex-row items-center justify-between gap-4 p-4"
+                className="flex-row items-center gap-3 p-3"
               >
-                <div className="w-12 h-12 rounded-sm bg-muted animate-pulse"></div>
-                <CardContent className="flex-1 p-0">
+                <div className="w-10 h-10 rounded-sm bg-muted animate-pulse flex-shrink-0"></div>
+                <CardContent className="flex-1 p-0 min-w-0">
                   <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
                 </CardContent>
-                <CardFooter className="p-0">
+                <div className="flex-shrink-0">
                   <div className="h-4 bg-muted rounded animate-pulse w-12"></div>
-                </CardFooter>
+                </div>
               </Card>
             ))
           ) : popularProducts.length > 0 ? (
             popularProducts.map((item) => (
               <Card
                 key={item.id}
-                className="flex-row items-center justify-between gap-4 p-4"
+                className="flex-row items-center gap-3 p-3"
               >
-                <div className="w-12 h-12 rounded-sm relative overflow-hidden">
+                <div className="w-10 h-10 rounded-sm relative overflow-hidden flex-shrink-0">
                   <Image
                     src={item.images && item.images.length > 0 ? item.images[0] : "/products/1g.png"}
                     alt={item.name}
@@ -165,15 +165,17 @@ const CardList = ({ title }: { title: string }) => {
                     }}
                   />
                 </div>
-                <CardContent className="flex-1 p-0">
-                  <CardTitle className="text-sm font-medium">
+                <CardContent className="flex-1 p-0 min-w-0">
+                  <CardTitle className="text-sm font-medium truncate" title={item.name}>
                     {item.name}
                   </CardTitle>
                   <Badge variant="secondary" className="text-xs mt-1">
                     {item.salesCount || 0} sales
                   </Badge>
                 </CardContent>
-                <CardFooter className="p-0">{formatPrice(item.price)}</CardFooter>
+                <div className="flex-shrink-0 text-sm font-medium text-right">
+                  {formatPrice(item.price)}
+                </div>
               </Card>
             ))
           ) : error ? (
@@ -194,42 +196,42 @@ const CardList = ({ title }: { title: string }) => {
             Array.from({ length: 5 }).map((_, index) => (
               <Card
                 key={index}
-                className="flex-row items-center justify-between gap-4 p-4"
+                className="flex-row items-center gap-3 p-3"
               >
-                <div className="w-12 h-12 rounded-sm bg-muted animate-pulse"></div>
-                <CardContent className="flex-1 p-0">
+                <div className="w-10 h-10 rounded-sm bg-muted animate-pulse flex-shrink-0"></div>
+                <CardContent className="flex-1 p-0 min-w-0">
                   <div className="h-4 bg-muted rounded animate-pulse w-24 mb-2"></div>
                   <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
                 </CardContent>
-                <CardFooter className="p-0">
+                <div className="flex-shrink-0">
                   <div className="h-4 bg-muted rounded animate-pulse w-12"></div>
-                </CardFooter>
+                </div>
               </Card>
             ))
           ) : latestOrders.length > 0 ? (
             latestOrders.map((order) => (
               <Card
                 key={order.id}
-                className="flex-row items-center justify-between gap-4 p-4 cursor-pointer"
+                className="flex-row items-center gap-3 p-3 cursor-pointer"
                 onClick={() => handleOrderClick(order)}
               >
-                <div className="w-12 h-12 rounded-sm relative overflow-hidden bg-blue-100 flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer">
+                <div className="w-10 h-10 rounded-sm relative overflow-hidden bg-blue-100 flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer flex-shrink-0">
                   <span className="text-blue-600 text-xs font-medium">#{order.orderNumber}</span>
                 </div>
-                <CardContent className="flex-1 p-0">
-                  <CardTitle className="text-sm font-medium">
+                <CardContent className="flex-1 p-0 min-w-0">
+                  <CardTitle className="text-sm font-medium truncate" title={`Order #${order.orderNumber}`}>
                     Order #{order.orderNumber}
                   </CardTitle>
                   <Badge variant={getStatusBadgeVariant(order.status)} className="text-xs mt-1">
                     {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                   </Badge>
-                  <div className="text-xs text-muted-foreground mt-1">
+                  <div className="text-xs text-muted-foreground mt-1 truncate">
                     {order.customerName} • {formatOrderDate(order.createdAt)}
                   </div>
                 </CardContent>
-                <CardFooter className="p-0">
-                  <span className="text-sm font-medium">{formatPrice(order.total)}</span>
-                </CardFooter>
+                <div className="flex-shrink-0 text-sm font-medium text-right">
+                  {formatPrice(order.total)}
+                </div>
               </Card>
             ))
           ) : error ? (

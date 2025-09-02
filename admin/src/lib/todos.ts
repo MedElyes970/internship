@@ -31,6 +31,7 @@ export const toDateKey = (date: Date): string => {
 
 export const addTodo = async (text: string, dateKey: string): Promise<TodoItem> => {
   if (!text.trim()) throw new Error('Todo text is required');
+  const now = new Date();
   const docRef = await addDoc(collection(db, COLLECTION_NAME), {
     text: text.trim(),
     completed: false,
@@ -38,7 +39,14 @@ export const addTodo = async (text: string, dateKey: string): Promise<TodoItem> 
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return { id: docRef.id, text: text.trim(), completed: false, dateKey };
+  return { 
+    id: docRef.id, 
+    text: text.trim(), 
+    completed: false, 
+    dateKey,
+    createdAt: now,
+    updatedAt: now
+  };
 };
 
 export const getTodosByDate = async (dateKey: string): Promise<TodoItem[]> => {

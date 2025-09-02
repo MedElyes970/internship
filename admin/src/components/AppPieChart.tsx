@@ -8,49 +8,119 @@ import {
   ChartTooltipContent,
 } from "./ui/chart";
 import { TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getCategorySalesData } from "@/lib/products";
 
 const chartConfig = {
-  visitors: {
-    label: "Visitors",
+  products: {
+    label: "Products",
   },
-  chrome: {
-    label: "Chrome",
+  category1: {
+    label: "Category 1",
     color: "var(--chart-1)",
   },
-  safari: {
-    label: "Safari",
+  category2: {
+    label: "Category 2",
     color: "var(--chart-2)",
   },
-  firefox: {
-    label: "Firefox",
+  category3: {
+    label: "Category 3",
     color: "var(--chart-3)",
   },
-  edge: {
-    label: "Edge",
+  category4: {
+    label: "Category 4",
     color: "var(--chart-4)",
   },
-  other: {
-    label: "Other",
+  category5: {
+    label: "Category 5",
     color: "var(--chart-5)",
+  },
+  category6: {
+    label: "Category 6",
+    color: "var(--chart-6)",
   },
 } satisfies ChartConfig;
 
-const chartData = [
-  { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
-  { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
-  { browser: "firefox", visitors: 287, fill: "var(--color-firefox)" },
-  { browser: "edge", visitors: 173, fill: "var(--color-edge)" },
-  { browser: "other", visitors: 190, fill: "var(--color-other)" },
-];
+interface CategoryData {
+  category: string;
+  totalSales: number;
+  productCount: number;
+}
 
 const AppPieChart = () => {
+  const [chartData, setChartData] = useState<CategoryData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // If you don't use React compiler use useMemo hook to improve performance
-  const totalVisitors = chartData.reduce((acc, curr) => acc + curr.visitors, 0);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getCategorySalesData(6);
+        setChartData(data);
+      } catch (err) {
+        console.error('Error fetching category data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Transform data for pie chart
+  const pieData = chartData.map((item, index) => ({
+    category: item.category,
+    products: item.productCount,
+    fill: `var(--color-category${index + 1})`
+  }));
+
+  const totalProducts = chartData.reduce((acc, curr) => acc + curr.productCount, 0);
   
+  if (loading) {
+    return (
+      <div className="">
+        <h1 className="text-lg font-medium mb-6">Category Distribution</h1>
+        <div className="mx-auto aspect-square max-h-[250px] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="">
+        <h1 className="text-lg font-medium mb-6">Category Distribution</h1>
+        <div className="mx-auto aspect-square max-h-[250px] flex items-center justify-center">
+          <div className="text-center text-red-500">
+            <p>Error loading data</p>
+            <p className="text-sm text-gray-500">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (chartData.length === 0) {
+    return (
+      <div className="">
+        <h1 className="text-lg font-medium mb-6">Category Distribution</h1>
+        <div className="mx-auto aspect-square max-h-[250px] flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <p>No categories available</p>
+            <p className="text-sm">Categories will appear here once products are added</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="">
-      <h1 className="text-lg font-medium mb-6">Browser Usage</h1>
+      <h1 className="text-lg font-medium mb-6">Category Distribution</h1>
       <ChartContainer
         config={chartConfig}
         className="mx-auto aspect-square max-h-[250px]"
@@ -58,12 +128,18 @@ const AppPieChart = () => {
         <PieChart>
           <ChartTooltip
             cursor={false}
-            content={<ChartTooltipContent hideLabel />}
+            content={<ChartTooltipContent 
+              formatter={(value, name) => [
+                `${value} products`, 
+                name === 'products' ? 'Product Count' : name
+              ]}
+              labelFormatter={(label) => `Category: ${label}`}
+            />}
           />
           <Pie
-            data={chartData}
-            dataKey="visitors"
-            nameKey="browser"
+            data={pieData}
+            dataKey="products"
+            nameKey="category"
             innerRadius={60}
             strokeWidth={5}
           >
@@ -82,14 +158,14 @@ const AppPieChart = () => {
                         y={viewBox.cy}
                         className="fill-foreground text-3xl font-bold"
                       >
-                        {totalVisitors.toLocaleString()}
+                        {totalProducts.toLocaleString()}
                       </tspan>
                       <tspan
                         x={viewBox.cx}
                         y={(viewBox.cy || 0) + 24}
                         className="fill-muted-foreground"
                       >
-                        Visitors
+                        Products
                       </tspan>
                     </text>
                   );
@@ -101,10 +177,10 @@ const AppPieChart = () => {
       </ChartContainer>
       <div className="mt-4 flex flex-col gap-2 items-center">
         <div className="flex items-center gap-2 font-medium leading-none">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4 text-green-500" />
+          {chartData.length} categories <TrendingUp className="h-4 w-4 text-green-500" />
         </div>
         <div className="leading-none text-muted-foreground">
-          Showing total visitors for the last 6 months
+          Showing product distribution across categories
         </div>
       </div>
     </div>

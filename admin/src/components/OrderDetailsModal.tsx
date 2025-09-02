@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { updateOrderStatus } from "@/lib/products";
+import { updateOrderStatus, formatPrice } from "@/lib/products";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -86,12 +86,7 @@ const OrderDetailsModal = ({
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("ar-TN", {
-      style: "currency",
-      currency: "TND",
-    }).format(amount / 1000);
-  };
+
 
   const handleStatusUpdate = async () => {
     if (!order || status === order.status) return;
@@ -171,7 +166,7 @@ const OrderDetailsModal = ({
                   <div>
                     <span className="text-gray-600">Total Amount:</span>
                     <p className="font-medium text-lg">
-                      {formatCurrency(order.total)}
+                      {formatPrice(order.total)}
                     </p>
                   </div>
                 </div>
@@ -254,10 +249,10 @@ const OrderDetailsModal = ({
                         {/* Price Info */}
                         <div className="text-right">
                           <p className="font-medium">
-                            {formatCurrency(item.price)}
+                            {formatPrice(item.price)}
                           </p>
                           <p className="text-xs text-gray-600">
-                            Total: {formatCurrency(item.price * item.quantity)}
+                            Total: {formatPrice(item.price * item.quantity)}
                           </p>
                         </div>
                       </div>

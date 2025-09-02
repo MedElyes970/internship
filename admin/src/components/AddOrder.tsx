@@ -30,7 +30,7 @@ import { Button } from "./ui/button";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, increment, query, where, getDocs, setDoc } from "firebase/firestore";
 import { toast } from "sonner";
-import { getCurrentPrice, isDiscountValid, Product } from "@/lib/products";
+import { getCurrentPrice, isDiscountValid, Product, formatPrice } from "@/lib/products";
 import { X } from "lucide-react";
 
 const orderItemSchema = z.object({

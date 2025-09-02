@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Calendar, Package, Search, Filter } from "lucide-react";
-import { getProducts, deleteProduct, Product, getStockStatusColor, getStockStatusText } from "@/lib/products";
+import { getProducts, deleteProduct, Product, getStockStatusColor, getStockStatusText, formatPrice } from "@/lib/products";
 import { getCategoriesWithSubcategories } from "@/lib/categories";
 import { toast } from "sonner";
 import AddProduct from "@/components/AddProduct";
@@ -104,16 +104,7 @@ export default function ProductsPage() {
     return date.toLocaleDateString();
   };
 
-  const formatPrice = (price: number) => {
-    // Convert price from millimes to dinars (divide by 1000)
-    const priceInDinars = price / 1000;
-    return new Intl.NumberFormat('ar-TN', {
-      style: 'currency',
-      currency: 'TND',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(priceInDinars);
-  };
+
 
   // Get categories from database
   const [categories, setCategories] = useState<string[]>(["all"]);
@@ -252,20 +243,10 @@ export default function ProductsPage() {
                     {product.hasDiscount && product.discountPercentage && product.discountPercentage > 0 ? (
                       <>
                         <span className="text-lg font-bold text-green-600">
-                          {new Intl.NumberFormat('ar-TN', {
-                            style: 'currency',
-                            currency: 'TND',
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0
-                          }).format((product.discountedPrice || product.price) / 1000)}
+                          {formatPrice(product.discountedPrice || product.price)}
                         </span>
                         <span className="text-sm text-muted-foreground line-through">
-                          {new Intl.NumberFormat('ar-TN', {
-                            style: 'currency',
-                            currency: 'TND',
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0
-                          }).format(product.price / 1000)}
+                          {formatPrice(product.price)}
                         </span>
                         <Badge variant="destructive" className="text-xs w-fit">
                           {product.discountPercentage}% OFF

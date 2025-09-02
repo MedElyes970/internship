@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Card, CardContent, CardFooter, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { useEffect, useState } from "react";
-import { getPopularProducts, getLatestOrders, Product } from "@/lib/products";
+import { getPopularProducts, getLatestOrders, Product, formatPrice } from "@/lib/products";
 import OrderDetailsModal from "./OrderDetailsModal";
 
 const CardList = ({ title }: { title: string }) => {
@@ -173,7 +173,7 @@ const CardList = ({ title }: { title: string }) => {
                     {item.salesCount || 0} sales
                   </Badge>
                 </CardContent>
-                <CardFooter className="p-0">${item.price}</CardFooter>
+                <CardFooter className="p-0">{formatPrice(item.price)}</CardFooter>
               </Card>
             ))
           ) : error ? (
@@ -228,7 +228,7 @@ const CardList = ({ title }: { title: string }) => {
                   </div>
                 </CardContent>
                 <CardFooter className="p-0">
-                  <span className="text-sm font-medium">${order.total.toFixed(2)}</span>
+                  <span className="text-sm font-medium">{formatPrice(order.total)}</span>
                 </CardFooter>
               </Card>
             ))

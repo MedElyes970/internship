@@ -502,6 +502,18 @@ export const getCurrentPrice = (product: Product): number => {
   return product.price;
 };
 
+// Helper function to format price in Tunisian format (no decimals, comma separator)
+export const formatPrice = (price: number): string => {
+  // Convert price from millimes to dinars (divide by 1000)
+  const priceInDinars = price / 1000;
+  return new Intl.NumberFormat('ar-TN', {
+    style: 'currency',
+    currency: 'TND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(priceInDinars);
+};
+
 // Get latest orders
 export const getLatestOrders = async (limit: number = 5): Promise<Array<{
   id: string;

@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
+import { formatPrice } from "@/lib/products";
 
 export type Payment = {
   id: string;
@@ -86,10 +87,7 @@ export const columns: ColumnDef<Payment>[] = [
     header: () => <div className="text-right">Amount</div>,
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue("amount"));
-      const formatted = new Intl.NumberFormat("ar-TN", {
-        style: "currency",
-        currency: "TND",
-      }).format(amount / 1000);
+      const formatted = formatPrice(amount);
 
       return <div className="text-right font-medium">{formatted}</div>;
     },

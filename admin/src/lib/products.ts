@@ -582,3 +582,48 @@ export const updateOrderStatus = async (orderId: string, newStatus: string): Pro
     throw new Error(`Failed to update order status: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
+
+// Get category sales data for charts
+export const getCategorySalesData = async (limit: number = 6): Promise<Array<{
+  category: string;
+  totalSales: number;
+  productCount: number;
+}>> => {
+  try {
+    console.log('Fetching category sales data...');
+    
+    const products = await getProducts();
+    console.log(`Retrieved ${products.length} products`);
+    
+    // Group products by category and calculate total sales
+    const categoryMap = new Map<string, { totalSales: number; productCount: number }>();
+    
+    products.forEach(product => {
+      if (product.category) {
+        const salesCount = product.salesCount || 0;
+        const existing = categoryMap.get(product.category) || { totalSales: 0, productCount: 0 };
+        
+        categoryMap.set(product.category, {
+          totalSales: existing.totalSales + salesCount,
+          productCount: existing.productCount + 1
+        });
+      }
+    });
+    
+    // Convert to array and sort by total sales
+    const categoryData = Array.from(categoryMap.entries())
+      .map(([category, data]) => ({
+        category,
+        totalSales: data.totalSales,
+        productCount: data.productCount
+      }))
+      .sort((a, b) => b.totalSales - a.totalSales)
+      .slice(0, limit);
+    
+    console.log('Category sales data:', categoryData);
+    return categoryData;
+  } catch (error) {
+    console.error('Error getting category sales data:', error);
+    throw new Error(`Failed to get category sales data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};

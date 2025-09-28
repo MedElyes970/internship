@@ -74,6 +74,7 @@ export type FetchProductsOptions = {
   limitCount?: number;
   page?: number;
   productsPerPage?: number;
+  searchTerm?: string;
 };
 
 const mapDocToProduct = (snap: any): ProductType => {
@@ -159,7 +160,7 @@ const getSubcategoryNameFromSlug = async (subcategorySlug: string, categorySlug:
 };
 
 export const fetchProducts = async (options: FetchProductsOptions = {}): Promise<ProductsType> => {
-  const { categorySlug, subcategorySlug, sort, page = 1, productsPerPage = 12 } = options;
+  const { categorySlug, subcategorySlug, sort, page = 1, productsPerPage = 12, searchTerm } = options;
 
   const colRef = collection(db, PRODUCTS_COLLECTION);
   const constraints: any[] = [];
@@ -190,7 +191,23 @@ export const fetchProducts = async (options: FetchProductsOptions = {}): Promise
   
   console.log('Firestore query result:', snapshot.docs.length, 'products');
   
-  const allProducts = snapshot.docs.map(mapDocToProduct);
+  let allProducts = snapshot.docs.map(mapDocToProduct);
+  
+  // Apply search filter if searchTerm is provided
+  if (searchTerm && searchTerm.trim()) {
+    const normalizedSearchTerm = searchTerm.toLowerCase().trim();
+    allProducts = allProducts.filter(product => {
+      const searchableFields = [
+        product.name,
+        product.description,
+        product.brand,
+        product.category,
+        product.subcategory
+      ].filter(Boolean).map(field => field.toLowerCase());
+      
+      return searchableFields.some(field => field.includes(normalizedSearchTerm));
+    });
+  }
   
   // Apply pagination
   const startIndex = (page - 1) * productsPerPage;

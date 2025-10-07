@@ -8,6 +8,7 @@ import { CheckCircle } from "lucide-react";
 import Image from "next/image";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { formatPrice } from "@/lib/products";
 
 const OrderSuccess = () => {
   const { user } = useAuth();
@@ -106,7 +107,7 @@ const OrderSuccess = () => {
               </div>
             </div>
             <p className="font-medium">
-              ${(item.price * item.quantity).toFixed(2)}
+              {formatPrice(item.price * item.quantity)}
             </p>
           </div>
         ))}
@@ -114,7 +115,7 @@ const OrderSuccess = () => {
         <hr className="border-gray-200" />
         <div className="flex justify-between font-semibold">
           <p>Total</p>
-          <p>${total.toFixed(2)}</p>
+          <p>{formatPrice(total)}</p>
         </div>
       </div>
 

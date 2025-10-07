@@ -1,5 +1,7 @@
 import ProductList from "@/components/ProductList";
 import PopularProducts from "@/components/PopularProducts";
+import NewArrivals from "@/components/NewArrivals";
+import Sales from "@/components/Sales";
 import TrustedBy from "@/components/TrustedBy";
 import Image from "next/image";
 
@@ -29,6 +31,8 @@ const Homepage = async ({
         page={currentPage}
         productsPerPage={12}
       />
+      <NewArrivals />
+      <Sales />
       <PopularProducts />
       <TrustedBy />
     </div>

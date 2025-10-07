@@ -7,8 +7,8 @@ import ProductCard from "./ProductCard";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const PopularProducts = () => {
-  const [popularProducts, setPopularProducts] = useState<ProductType[]>([]);
+const NewArrivals = () => {
+  const [newProducts, setNewProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -17,37 +17,24 @@ const PopularProducts = () => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
 
   useEffect(() => {
-    const loadPopularProducts = async () => {
+    const loadNewProducts = async () => {
       try {
-        // Fetch products sorted by sales count (descending) and limit to 10
+        // Fetch products sorted by newest first
         const products = await fetchProducts({ 
-          sort: "desc", // This will sort by price desc, but we'll sort by sales count client-side
+          sort: "newest",
           productsPerPage: 20 // Fetch more to have variety
         });
         
-        // Sort by sales count and take top 10
-        const sortedBySales = products
-          .filter(product => product.salesCount && product.salesCount > 0)
-          .sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0))
-          .slice(0, 10);
-        
-        // If not enough products with sales, add some random products
-        if (sortedBySales.length < 10) {
-          const remainingProducts = products.filter(
-            product => !sortedBySales.find(p => p.id === product.id)
-          );
-          sortedBySales.push(...remainingProducts.slice(0, 10 - sortedBySales.length));
-        }
-        
-        setPopularProducts(sortedBySales);
+        // Take the first 10 newest products
+        setNewProducts(products.slice(0, 10));
       } catch (error) {
-        console.error("Error loading popular products:", error);
+        console.error("Error loading new products:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadPopularProducts();
+    loadNewProducts();
   }, []);
 
   const handleScrollLeft = () => {
@@ -109,14 +96,14 @@ const PopularProducts = () => {
 
   if (loading) {
     return (
-      <div className="py-16 bg-blue-50">
+      <div className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              ⭐ Popular Products
+              New Arrivals
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Discover our best-selling products loved by customers worldwide
+              Discover our latest products and newest additions to our collection
             </p>
           </div>
           <div className="flex justify-center">
@@ -127,25 +114,25 @@ const PopularProducts = () => {
     );
   }
 
-  if (popularProducts.length === 0) {
+  if (newProducts.length === 0) {
     return null;
   }
 
   return (
-    <div className="py-16 bg-blue-50">
+    <div className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            ⭐ Popular Products
+            New Arrivals
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Discover our best-selling products loved by customers worldwide
+            Discover our latest products and newest additions to our collection
           </p>
         </div>
 
         <div className="relative">
           {/* Navigation buttons */}
-          {popularProducts.length > 4 && (
+          {newProducts.length > 4 && (
             <>
               <button
                 onClick={handleScrollLeft}
@@ -183,7 +170,7 @@ const PopularProducts = () => {
             onTouchEnd={handleTouchEnd}
             onScroll={handleScroll}
           >
-            {popularProducts.map((product) => (
+            {newProducts.map((product) => (
               <div key={product.id} className="flex-shrink-0 w-56 sm:w-64">
                 <ProductCard product={product} />
               </div>
@@ -194,10 +181,10 @@ const PopularProducts = () => {
         {/* View all products link */}
         <div className="text-center mt-8">
           <Link
-            href="/products"
+            href="/products?sort=newest"
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
           >
-            View All Popular Products
+            View All New Products
             <ChevronRight className="ml-2 w-4 h-4" />
           </Link>
         </div>
@@ -206,4 +193,4 @@ const PopularProducts = () => {
   );
 };
 
-export default PopularProducts;
+export default NewArrivals;

@@ -11,6 +11,7 @@ import {
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { fetchUserOrders, UserOrder } from "@/lib/userOrders";
+import { formatPrice } from "@/lib/products";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import {
   User,
@@ -667,8 +668,7 @@ const ProfilePage = () => {
                         
                         <div className="flex items-center gap-4 text-sm">
                           <div className="flex items-center gap-1">
-                            <DollarSign className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium">${order.total.toFixed(2)}</span>
+                            <span className="font-medium">{formatPrice(order.total)}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4 text-gray-400" />

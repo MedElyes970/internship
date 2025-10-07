@@ -28,12 +28,10 @@ const TrustedBy = () => {
   }, []);
 
   const companies = [
-    { name: "Company A", logo: "/placeholder-logo-1.png" },
-    { name: "Company B", logo: "/placeholder-logo-2.png" },
-    { name: "Company C", logo: "/placeholder-logo-3.png" },
-    { name: "Company D", logo: "/placeholder-logo-4.png" },
-    { name: "Company E", logo: "/placeholder-logo-5.png" },
-    { name: "Company F", logo: "/placeholder-logo-6.png" },
+    { name: "Sfaximoules", logo: "/cb.png" },
+    { name: "Acia SUD", logo: "/cc.png" },
+    { name: "Compagnie des Phosphates de Gafsa", logo: "/cd1.png" },
+    { name: "G.T.I Générales Technique Industriel", logo: "/ce.png" },
   ];
 
   return (
@@ -48,7 +46,7 @@ const TrustedBy = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 items-center justify-items-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 items-center justify-items-center max-w-4xl mx-auto">
           {companies.map((company, index) => (
             <div
               key={company.name}
@@ -61,14 +59,13 @@ const TrustedBy = () => {
                 transitionDelay: `${index * 100}ms`,
               }}
             >
-              {/* Placeholder logo - replace with actual logos later */}
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-lg flex items-center justify-center mb-3 border-2 border-dashed border-gray-300">
-                <div className="text-center">
-                  <div className="text-gray-400 text-xs font-medium">
-                    {company.name}
-                  </div>
-                  <div className="text-gray-300 text-xs">LOGO</div>
-                </div>
+              {/* Company logo */}
+              <div className="w-20 h-20 sm:w-24 sm:h-24 mb-3 flex items-center justify-center">
+                <img
+                  src={company.logo}
+                  alt={`${company.name} logo`}
+                  className="max-w-full max-h-full object-contain"
+                />
               </div>
               
               {/* Company name */}

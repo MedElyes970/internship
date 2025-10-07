@@ -35,7 +35,7 @@ const ContactPage = () => {
 
     try {
       // Create mailto link with form data
-      const mailtoLink = `mailto:mohamedelyesmoalla970@gmail.com?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(
+      const mailtoLink = `mailto:fag@gnet.tn?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(
         `Name: ${data.name}\nEmail: ${data.email}\n\nMessage:\n${data.message}`
       )}`;
 
@@ -59,20 +59,19 @@ const ContactPage = () => {
     {
       icon: Mail,
       title: "Email",
-      value: "mohamedelyesmoalla970@gmail.com",
-      link: "mailto:mohamedelyesmoalla970@gmail.com",
+      value: "fag@gnet.tn",
+      link: "mailto:fag@gnet.tn",
     },
     {
       icon: Phone,
       title: "Phone",
-      value: "+216 XX XXX XXX",
-      link: "tel:+216XXXXXXXXX",
+      value: "+216 74 259 610",
+      link: "tel:+21674259610",
     },
     {
       icon: MapPin,
       title: "Address",
-      value: "Tunisia",
-      link: "#",
+      value: "Route De Teniour Km1, Immeuble Ayedi - Sfax 3002 Tunisie",
     },
   ];
 
@@ -260,15 +259,6 @@ const ContactPage = () => {
                 )}
               </button>
             </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-500">
-                By clicking "Send Message", you agree to our{" "}
-                <a href="#" className="text-blue-600 hover:text-blue-800">
-                  Privacy Policy
-                </a>
-              </p>
-            </div>
           </div>
         </div>
       </div>

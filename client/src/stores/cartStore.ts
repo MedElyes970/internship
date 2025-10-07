@@ -9,6 +9,11 @@ const useCartStore = create<CartStoreStateType & CartStoreActionsType>()(
       hasHydrated: false,
       addToCart: (product) =>
         set((state) => {
+          // Clean the product data to remove undefined fields
+          const cleanProduct = Object.fromEntries(
+            Object.entries(product).filter(([_, value]) => value !== undefined)
+          );
+
           const existingIndex = state.cart.findIndex(
             (p) => p.id === product.id
           );
@@ -23,7 +28,7 @@ const useCartStore = create<CartStoreStateType & CartStoreActionsType>()(
             cart: [
               ...state.cart,
               {
-                ...product,
+                ...cleanProduct,
                 quantity: product.quantity || 1,
               },
             ],

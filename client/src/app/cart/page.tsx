@@ -145,6 +145,22 @@ const CartPage = () => {
         await setDoc(counterRef, { current: 1 });
       }
 
+      // Validate cart items before creating order
+      console.log("Cart items before order creation:", cart);
+      
+      // Check for undefined fields in cart items
+      const invalidItems = cart.filter(item => {
+        const hasUndefinedFields = Object.values(item).some(value => value === undefined);
+        if (hasUndefinedFields) {
+          console.error("Item with undefined fields:", item);
+        }
+        return hasUndefinedFields;
+      });
+      
+      if (invalidItems.length > 0) {
+        throw new Error("Some cart items have undefined fields. Please refresh the page and try again.");
+      }
+
       const orderData = {
         orderNumber: orderNumber,
         userId: user.uid,

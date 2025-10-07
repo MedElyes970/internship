@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { updateOrderStatus, formatPrice } from "@/lib/products";
+import { updateOrderStatus, formatPrice, getFirstProductImage } from "@/lib/products";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -226,13 +226,14 @@ const OrderDetailsModal = ({
                         {/* Product Image */}
                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                           <img
-                            src={
-                              item.images && item.images.length > 0
-                                ? item.images[0]
-                                : "/products/1g.png"
-                            }
+                            src={getFirstProductImage(item.images)}
                             alt={item.name}
                             className="w-full h-full object-contain"
+                            onError={(e) => {
+                              // Fallback to default image if the product image fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/products/1g.png";
+                            }}
                           />
                         </div>
 

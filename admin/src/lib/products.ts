@@ -502,6 +502,25 @@ export const getCurrentPrice = (product: Product): number => {
   return product.price;
 };
 
+// Helper function to get the first image from product images (handles both object and array formats)
+export const getFirstProductImage = (images: any): string => {
+  if (!images) return "/products/1g.png";
+  
+  // Handle object format (from client-side products)
+  if (typeof images === 'object' && !Array.isArray(images)) {
+    const imageValues = Object.values(images);
+    return imageValues.length > 0 ? imageValues[0] as string : "/products/1g.png";
+  }
+  
+  // Handle array format (from admin-side products)
+  if (Array.isArray(images) && images.length > 0) {
+    return images[0];
+  }
+  
+  // Fallback to default image
+  return "/products/1g.png";
+};
+
 // Helper function to format price in Tunisian format (no decimals, comma separator)
 export const formatPrice = (price: number): string => {
   // Convert price from millimes to dinars (divide by 1000)

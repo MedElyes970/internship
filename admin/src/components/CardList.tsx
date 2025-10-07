@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Card, CardContent, CardFooter, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { useEffect, useState } from "react";
-import { getPopularProducts, getLatestOrders, Product, formatPrice } from "@/lib/products";
+import { getPopularProducts, getLatestOrders, Product, formatPrice, getFirstProductImage } from "@/lib/products";
 import OrderDetailsModal from "./OrderDetailsModal";
 
 const CardList = ({ title }: { title: string }) => {
@@ -154,7 +154,7 @@ const CardList = ({ title }: { title: string }) => {
               >
                 <div className="w-10 h-10 rounded-sm relative overflow-hidden flex-shrink-0">
                   <Image
-                    src={item.images && item.images.length > 0 ? item.images[0] : "/products/1g.png"}
+                    src={getFirstProductImage(item.images)}
                     alt={item.name}
                     fill
                     className="object-cover"
